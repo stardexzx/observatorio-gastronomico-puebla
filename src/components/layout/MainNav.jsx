@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import Icon from '../../assets/icons.jsx';
-import { getReportData } from '../../services/api.js';
+import { getReportData, usesDatabase } from '../../services/api.js';
 
 const groups = [
   { id: 'explorar', label: 'Explorar', links: [
@@ -29,6 +29,7 @@ export default function MainNav() {
   const location = useLocation();
   const [openGroup, setOpenGroup] = useState('');
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [downloadError, setDownloadError] = useState('');
   const activePath = location.pathname;
   const pathMatches = (to) => activePath === to || activePath.startsWith(`${to}/`);
 
@@ -45,12 +46,15 @@ export default function MainNav() {
   }, []);
   const downloadMock = async (event) => {
     event.preventDefault();
+    setDownloadError('');
+    try {
     const data = await getReportData();
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
-    anchor.href = url; anchor.download = 'ogp-analitica-mock.json'; anchor.click();
+    anchor.href = url; anchor.download = usesDatabase ? 'ogp-indicadores-publicos.json' : 'ogp-analitica-mock.json'; anchor.click();
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch { setDownloadError('No fue posible descargar los datos. Intenta de nuevo.'); }
   };
 
   return (
@@ -72,6 +76,7 @@ export default function MainNav() {
       </div>
       <div className="mn-aux">
         <a href="#descargar-datos" onClick={downloadMock}><Icon name="download" size={15} /> Descargar datos</a>
+        {downloadError && <span className="download-error" role="alert">{downloadError}</span>}
         <Link to="/admin" className={pathMatches('/admin') ? 'current' : ''}><Icon name="lock" size={14} /> Administración</Link>
       </div>
     </nav>

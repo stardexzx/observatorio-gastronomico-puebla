@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 const labels = [
+  ['/buscar', 'Consulta', 'Resultados de búsqueda'], ['/registro', 'Explorar', 'Ficha pública'],
   ['/mapa', 'Explorar', 'Mapa'], ['/recetas', 'Explorar', 'Recetas'], ['/mercados', 'Explorar', 'Mercados'],
   ['/cocineras', 'Explorar', 'Cocineras y Cocineros'], ['/proteccion-legal', 'Explorar', 'Protección legal'],
   ['/red-conocimiento', 'Datos y Análisis', 'Red de conocimiento'], ['/reportes', 'Datos y Análisis', 'Reportes'],

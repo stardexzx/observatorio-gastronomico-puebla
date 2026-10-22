@@ -4,16 +4,24 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "node scripts/dev.mjs",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "dev:demo": "VITE_DATA_SOURCE=demo node scripts/dev.mjs",
+    "api": "node server/index.mjs",
+    "configurar": "node scripts/configure.mjs",
+    "db:up": "docker compose up -d --wait",
+    "db:stop": "docker compose stop",
+    "db:test": "docker compose exec -T db psql -U ogp_admin -d observatorio -v ON_ERROR_STOP=1 < database/prueba_integridad.sql",
+    "test": "node --test tests/api.test.mjs",
+    "test:db": "node --env-file=.env --test tests/database.test.mjs"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
-    "vite": "latest",
+    "pg": "^8.23.1",
     "react": "latest",
     "react-dom": "latest",
-    "react-router-dom": "latest"
-  },
-  "devDependencies": {}
+    "react-router-dom": "latest",
+    "vite": "latest"
+  }
 }

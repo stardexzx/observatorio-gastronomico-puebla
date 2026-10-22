@@ -467,6 +467,31 @@ table.simple td{padding:10px 10px;border-bottom:1px solid var(--border);}
 
 .search input { width:100%; min-width:0; background:transparent; border:0; outline:0; color:#EAF0FA; font:inherit; }
 .search input::placeholder { color:#CBD6EA; opacity:1; }
+
+/* Controles de consulta integrados en el diseño original. */
+.data-source{display:table;margin:0 0 14px;padding:5px 10px;border:1px solid var(--border);border-radius:20px;color:var(--muted);font-size:10px;background:#fff;}
+.data-source.published{color:#4F7A4A;background:#F1F6EF;}
+.catalog-filters .g-input input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:var(--navy);font:inherit;}
+.catalog-filters .g-input:focus-within{outline:2px solid var(--gold);outline-offset:2px;}
+.catalog-pagination{display:flex;justify-content:center;align-items:center;gap:14px;margin:20px 0 8px;font-size:12px;color:var(--muted);}
+.g-btn:disabled{opacity:.4;cursor:default;}
+.search-submit{border:0;background:transparent;color:inherit;cursor:pointer;font-size:16px;padding:0;}
+.search-result{padding:18px;display:block;text-decoration:none;}
+.search-result h3{margin:12px 0 8px;font-size:15px;color:var(--navy);}
+.search-result p{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+.public-recent{color:inherit;text-decoration:none;}
+.public-recent:hover{background:#FAF8F2;}
+.public-relations,.podcast-series{margin:16px 0;}
+.public-relations h3,.podcast-series h3{margin-bottom:14px;}
+.public-body .g-p{white-space:pre-wrap;}
+.public-body audio{max-width:100%;margin:12px 0;}
+.recipe-steps{padding-left:20px;font-size:12px;line-height:1.8;color:var(--text);}
+.recipe-steps li{padding:5px 0;}
+.map-selection{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:12px 0;font-size:12px;color:var(--navy);}
+.map-record{background:none;border:0;color:var(--navy);font:inherit;font-weight:700;cursor:pointer;text-align:left;padding:0;}
+.map-record[aria-pressed=true]{text-decoration:underline;text-decoration-color:var(--gold);}
+.download-error{position:absolute;right:16px;top:100%;padding:12px;background:#fff;color:#B23A1F;border:1px solid var(--border);border-radius:8px;z-index:20;}
+@media(max-width:640px){.utils .search{display:flex;width:100%;min-width:0;}.topbar .utils{width:100%;}.topbar .search{flex:1;}.topbar .iconbtn{display:none;}.catalog-filters .g-input{min-width:120px;}}
 .iconbtn { border:0; cursor:pointer; }
 
 .topbar .menu-toggle { display:none; }

@@ -24,7 +24,7 @@ function makeCells(mode = 'heat') {
   return cells;
 }
 
-export default function PueblaHexMap({ mode = 'heat', markers = MARKERS, showLabels = true }) {
+export default function PueblaHexMap({ mode = 'heat', markers = MARKERS, showLabels = true, onSelect }) {
   const rawId = useId();
   const clipId = `puebla-clip-${rawId.replace(/:/g, '')}`;
   const cells = makeCells(mode);
@@ -40,7 +40,7 @@ export default function PueblaHexMap({ mode = 'heat', markers = MARKERS, showLab
         const x = Array.isArray(marker) ? marker[0] : marker.x;
         const y = Array.isArray(marker) ? marker[1] : marker.y;
         const type = Array.isArray(marker) ? marker[2] : marker.t;
-        return <g key={idx} transform={`translate(${x},${y})`}><circle r="5.5" fill={POINT_COLORS[type] || '#10284C'} stroke="#fff" strokeWidth="2" /><circle cy="-1" r="1.7" fill="#fff" /></g>;
+        return <g key={marker.id || idx} transform={`translate(${x},${y})`} role={onSelect ? 'button' : undefined} tabIndex={onSelect ? 0 : undefined} aria-label={marker.n} style={onSelect ? {cursor:'pointer'} : undefined} onClick={() => onSelect?.(marker.id)} onKeyDown={event => { if(onSelect && ['Enter',' '].includes(event.key)) {event.preventDefault();onSelect(marker.id);} }}><title>{marker.n || 'Registro ilustrativo'}</title><circle r="7" fill={POINT_COLORS[type] || '#10284C'} stroke="#fff" strokeWidth="2" /><circle cy="-1" r="1.7" fill="#fff" /></g>;
       })}
     </svg>
   );

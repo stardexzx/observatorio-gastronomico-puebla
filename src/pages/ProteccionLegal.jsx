@@ -1,12 +1,14 @@
-import React from 'react';
 import useRemoteData from './useRemoteData.js';
-import { getDeclaratorias } from '../services/api.js';
+import { LegalKpis } from '../components/charts/PublicKpis.jsx';
+import React from 'react';
+import useCatalog from './useCatalog.js';
+import { CatalogFilters, CatalogResults } from '../components/catalog/CatalogControls.jsx';
+import { getDeclaratorias, getLegalSummary } from '../services/api.js';
 import { Loading, PageHeader } from './CatalogPage.jsx';
-import Icon from '../assets/icons.jsx';
 import { Link } from 'react-router-dom';
 export default function ProteccionLegal() {
-  const {loading,data,error}=useRemoteData(getDeclaratorias,[]);
-  // Evita que el primer render intente leer length/map de null.
-  const registros = Array.isArray(data) ? data : [];
-  return <><PageHeader title="Protección legal" description="Declaratorias, indicaciones geográficas y expedientes de protección del patrimonio gastronómico." /><Loading loading={loading} error={error}><div className="g-kpis c5"><div className="g-kpi"><span className="g-dot" style={{width:40,height:40,background:'#10284C'}}><Icon name="shield" size={21}/></span><b>58</b><small>Protecciones activas</small><em>✓ Verificadas</em></div><div className="g-kpi"><span className="g-dot" style={{width:40,height:40,background:'#E8963C'}}><Icon name="folder" size={21}/></span><b>14</b><small>Expedientes en trámite</small></div><div className="g-kpi"><span className="g-dot" style={{width:40,height:40,background:'#C1531E'}}><Icon name="recipe" size={21}/></span><b>71</b><small>Recetas protegidas</small></div><div className="g-kpi"><span className="g-dot" style={{width:40,height:40,background:'#D89A2E'}}><Icon name="building" size={21}/></span><b>32</b><small>Municipios cubiertos</small></div><div className="g-kpi"><span className="g-dot" style={{width:40,height:40,background:'#2E8A82'}}><Icon name="calendar" size={21}/></span><small>Última actualización</small><small>12/05/2024</small></div></div><div className="g-card"><div className="g-ch"><h3>Declaratorias e Indicaciones Geográficas</h3><span className="g-tag">{registros.length} registros de ejemplo</span></div><div style={{overflowX:'auto'}}><table className="g-tbl"><thead><tr><th>Nombre</th><th>Tipo</th><th>Jurisdicción</th><th>Estado</th><th>Fecha</th><th>Ver</th></tr></thead><tbody>{registros.map(item=><tr key={item.id}><td><b style={{color:'var(--navy)'}}>{item.n}</b></td><td>{item.tpn}</td><td>{item.j}</td><td><span className={`g-tag ${item.st==='Otorgada'?'ok':'warn'}`}>{item.st}</span></td><td>{item.f}</td><td><Link className="g-link" to={`/proteccion-legal/${item.id}`}>Ver ficha ↗</Link></td></tr>)}</tbody></table></div></div></Loading></>;
+  const catalog=useCatalog(getDeclaratorias);
+  const summary=useRemoteData(getLegalSummary,[]);
+  const registros = catalog.items;
+  return <><PageHeader title="Protección legal" description="Declaratorias, indicaciones geográficas y expedientes de protección del patrimonio gastronómico." /><Loading {...summary}>{summary.data && <LegalKpis data={summary.data}/>}</Loading><CatalogFilters catalog={catalog}/><CatalogResults catalog={catalog}><div className="g-card"><div className="g-ch"><h3>Declaratorias e Indicaciones Geográficas</h3><span className="g-tag">{registros.length} registros</span></div><div style={{overflowX:'auto'}}><table className="g-tbl"><thead><tr><th>Nombre</th><th>Tipo</th><th>Jurisdicción</th><th>Estado</th><th>Fecha</th><th>Ver</th></tr></thead><tbody>{registros.map(item=><tr key={item.id}><td><b style={{color:'var(--navy)'}}>{item.n}</b></td><td>{item.tpn}</td><td>{item.j}</td><td><span className={`g-tag ${['Otorgada','Vigente'].includes(item.st)?'ok':'warn'}`}>{item.st}</span></td><td>{item.f}</td><td><Link className="g-link" to={`/proteccion-legal/${item.id}`}>Ver ficha ↗</Link></td></tr>)}</tbody></table></div></div></CatalogResults></>;
 }
