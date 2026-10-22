@@ -1,0 +1,23 @@
+name: ogp
+services:
+  db:
+    image: postgis/postgis:16-3.5@sha256:94146ac37bc61e2322f88016056c5920729cb8c64c8542ed590af8fc2abdac07
+    environment:
+      POSTGRES_DB: observatorio
+      POSTGRES_USER: ogp_admin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Ejecuta npm run configurar primero}
+      OGP_API_PASSWORD: ${OGP_API_PASSWORD:?Ejecuta npm run configurar primero}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - ogp_data:/var/lib/postgresql/data
+      - ./database/observatorio_puebla.sql:/docker-entrypoint-initdb.d/10-schema.sql:ro
+      - ./database/public_api.sql:/docker-entrypoint-initdb.d/20-public-api.sql:ro
+      - ./database/create_reader.sh:/docker-entrypoint-initdb.d/30-reader.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "psql -U ogp_admin -d observatorio -tAc \"SELECT 1 / count(*) FROM pg_roles WHERE rolname='ogp_web'\" >/dev/null"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+volumes:
+  ogp_data:

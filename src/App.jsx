@@ -18,6 +18,13 @@ import Recetas from './pages/Recetas.jsx';
 import RedConocimiento from './pages/RedConocimiento.jsx';
 import Reportes from './pages/Reportes.jsx';
 import VistasPendientes from './pages/VistasPendientes.jsx';
+import { sourceLabel, usesDatabase } from './services/api.js';
+import Buscar from './pages/Buscar.jsx';
+import FichaPublica from './pages/FichaPublica.jsx';
+import Podcast from './pages/Podcast.jsx';
+import InicioPublico from './pages/InicioPublico.jsx';
+import ReportesPublicos from './pages/ReportesPublicos.jsx';
+import MapaPublico from './pages/MapaPublico.jsx';
 
 export default function App() {
   return (
@@ -29,9 +36,10 @@ export default function App() {
         <MainNav />
         <main className="app-main">
           <Breadcrumb />
+          <div className={`data-source ${usesDatabase ? 'published' : ''}`}>{sourceLabel}</div>
           <Routes>
-            <Route path="/" element={<Inicio />} />
-            <Route path="/mapa" element={<Mapa />} />
+            <Route path="/" element={usesDatabase ? <InicioPublico/> : <Inicio />} />
+            <Route path="/mapa" element={usesDatabase ? <MapaPublico/> : <Mapa />} />
             <Route path="/red-conocimiento" element={<RedConocimiento />} />
             <Route path="/recetas" element={<Recetas />} />
             <Route path="/recetas/:id" element={<RecetaDetalle />} />
@@ -41,10 +49,12 @@ export default function App() {
             <Route path="/cocineras/:id" element={<CocineraDetalle />} />
             <Route path="/proteccion-legal" element={<ProteccionLegal />} />
             <Route path="/proteccion-legal/:id" element={<DeclaratoriaDetalle />} />
-            <Route path="/reportes" element={<Reportes />} />
+            <Route path="/reportes" element={usesDatabase ? <ReportesPublicos/> : <Reportes />} />
             <Route path="/acerca" element={<AcercaDe />} />
             <Route path="/memoria" element={<VistasPendientes title="Memoria histórica" description="El archivo histórico reunirá fuentes, recetarios y testimonios vinculados con la cocina poblana." />} />
-            <Route path="/podcast" element={<VistasPendientes title="Podcast" description="Este espacio está reservado para contenidos de audio y conversaciones con personas portadoras de saberes culinarios." />} />
+            <Route path="/podcast" element={<Podcast />} />
+            <Route path="/buscar" element={<Buscar />} />
+            <Route path="/registro/:id" element={<FichaPublica />} />
             <Route path="/experiencias" element={<VistasPendientes title="Experiencias de turistas" description="Una sección para documentar experiencias de visitantes y sus vínculos con el patrimonio gastronómico poblano." />} />
             <Route path="/admin" element={<VistasPendientes title="Administración" description="La gestión de usuarios, revisión y permisos se habilitará en una iteración posterior." />} />
             <Route path="*" element={<Navigate to="/" replace />} />
