@@ -10,11 +10,12 @@
     "dev:demo": "VITE_DATA_SOURCE=demo node scripts/dev.mjs",
     "api": "node server/index.mjs",
     "configurar": "node scripts/configure.mjs",
-    "db:up": "docker compose up -d --wait",
+    "db:up": "docker compose up -d --wait && npm run db:migrate",
     "db:stop": "docker compose stop",
     "db:test": "docker compose exec -T db psql -U ogp_admin -d observatorio -v ON_ERROR_STOP=1 < database/prueba_integridad.sql",
-    "test": "node --test tests/api.test.mjs",
-    "test:db": "node --env-file=.env --test tests/database.test.mjs"
+    "test": "node --test tests/api.test.mjs tests/editor-validation.test.mjs",
+    "test:db": "node --env-file=.env --test --test-concurrency=1 tests/database.test.mjs tests/editorial.test.mjs",
+    "db:migrate": "node scripts/migrate.mjs"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",

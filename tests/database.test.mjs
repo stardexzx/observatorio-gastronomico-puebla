@@ -19,6 +19,8 @@ before(async () => {
   owner=new pg.Pool({...connection,database});
   await owner.query(await file('database/observatorio_puebla.sql'));
   await owner.query(await file('database/public_api.sql'));
+  await owner.query(await file('database/editorial.sql'));
+  await owner.query(await file('database/municipal_map.sql'));
   await owner.query(await file('database/prueba_integridad.sql'));
   const check=await owner.query("SELECT count(*) FROM ogp.usuarios WHERE correo LIKE '%sql@invalid.example'");
   assert.equal(Number(check.rows[0].count),0,'la suite SQL revierte sus datos');
@@ -72,7 +74,7 @@ test('los borradores y los datos privados no salen por búsquedas ni detalles',a
 });
 test('el frontend conserva navegación y renderiza datos publicados en Chromium',{skip:process.env.OGP_BROWSER_TESTS!=='1'},async()=>{
   const {createServer:createVite}=await import('vite');
-  const vite=await createVite({server:{host:'127.0.0.1',port:0,proxy:{'/api':base}}});
+  const vite=await createVite({server:{host:'127.0.0.1',port:0,proxy:{'/api':{target:base,changeOrigin:false}}}});
   try {
     await vite.listen();
     const result=await promisify(execFile)('python',['tests/browser_smoke.py',`http://127.0.0.1:${vite.httpServer.address().port}`],{timeout:60000});

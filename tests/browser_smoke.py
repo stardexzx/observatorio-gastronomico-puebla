@@ -38,8 +38,8 @@ with sync_playwright() as p:
     page.get_by_text('Leer transcripción').click()
     expect(page.locator('main')).to_contain_text('Transcripción sintética.')
     page.goto(base + '/mapa', wait_until='networkidle')
-    page.get_by_role('button',name='Mercado de integración',exact=True).last.click()
-    expect(page.locator('.map-selection')).to_contain_text('-98.2')
+    page.get_by_label('Municipio',exact=True).select_option('21114')
+    expect(page.locator('.map-results')).to_contain_text('Mercado de integración')
     with page.expect_download() as download:
         page.get_by_role('link',name='Descargar datos').click()
     assert download.value.suggested_filename == 'ogp-indicadores-publicos.json'

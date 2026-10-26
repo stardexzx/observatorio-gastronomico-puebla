@@ -24,3 +24,10 @@ Los tres scripts del ZIP se conservan en `database/` sin modificar su contenido.
 La integración conserva el logo, el tema CSS, las ilustraciones y los menús. No importa un segundo diseño: el ZIP únicamente contiene SQL. El mapa mantiene su forma esquemática y no se presenta como cartografía precisa. Los contadores de PostgreSQL no usan las cifras ilustrativas del mockup.
 
 Los procedimientos de escritura/editoriales permanecen en la base para una futura capa autenticada. Memoria histórica y experiencias no tienen un modelo específico en el SQL adjunto; mantienen sus rutas pendientes.
+
+
+## Captura de cocineras y cartografía municipal
+
+La etapa descrita en `docs/CAPTURA_COCINERAS.md` añade una conexión editorial separada, sesiones y el flujo real de guardado, autorización, revisión y publicación. `database/editorial.sql` conserva los campos adicionales del diseño en snapshots públicos y los documentos de autorización en almacenamiento privado. El SQL original del ZIP permanece intacto.
+
+`public/maps/puebla-municipios.geojson` se extrajo como datos del HTML aportado, sin ejecutar su aplicación. `database/municipal_map.sql` calcula conteos desde publicaciones visibles. Los mapas actuales sustituyen las intensidades ilustrativas por datos reales; conservan los menús, colores y estructura del diseño aceptado.

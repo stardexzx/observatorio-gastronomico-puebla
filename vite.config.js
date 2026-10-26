@@ -4,7 +4,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   return {
     plugins: [react()],
-    server: { proxy: { '/api': `http://127.0.0.1:${process.env.API_PORT || env.API_PORT || 3001}` } },
-    preview: { proxy: { '/api': `http://127.0.0.1:${process.env.API_PORT || env.API_PORT || 3001}` } },
+    server: { proxy: { '/api': {target:`http://127.0.0.1:${process.env.API_PORT || env.API_PORT || 3001}`,changeOrigin:false} } },
+    preview: { proxy: { '/api': {target:`http://127.0.0.1:${process.env.API_PORT || env.API_PORT || 3001}`,changeOrigin:false} } },
   };
 });
