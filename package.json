@@ -4,10 +4,10 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "node scripts/dev.mjs",
-    "build": "vite build",
+    "dev": "node scripts/dev.mjs --demo",
+    "build": "node scripts/build-demo.mjs",
     "preview": "vite preview",
-    "dev:demo": "VITE_DATA_SOURCE=demo node scripts/dev.mjs",
+    "dev:demo": "node scripts/dev.mjs --demo",
     "api": "node server/index.mjs",
     "configurar": "node scripts/configure.mjs",
     "db:up": "docker compose up -d --wait && npm run db:migrate",

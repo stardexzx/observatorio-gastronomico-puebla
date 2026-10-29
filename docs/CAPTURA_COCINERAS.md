@@ -1,3 +1,5 @@
+> Documento de la integración PostgreSQL anterior. La etapa actual usa el [demo local](DEMO_LOCAL.md), con formularios nuevos y sin conexión a esta base.
+
 # Captura de cocineras, cocineros y colectivos
 
 Esta etapa toma el flujo de registro del HTML de pruebas, reúne sus campos con los del diseño aceptado y los guarda en PostgreSQL. Conserva la navegación superior del Observatorio. Los datos públicos se consultan en `/cocineras`; el equipo autorizado trabaja en `/admin`.

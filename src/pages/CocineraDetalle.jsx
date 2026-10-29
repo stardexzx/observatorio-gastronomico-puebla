@@ -1,3 +1,4 @@
+import RecordActions from "../components/demo/RecordActions.jsx";
 import { Link, useParams } from "react-router-dom";
 import useRemoteData from "./useRemoteData.js";
 import { getCocineraById } from "../services/api.js";
@@ -24,6 +25,11 @@ export default function CocineraDetalle() {
               {data.community ? ` · ${data.community}` : ""}
             </p>
           </div>
+          <RecordActions
+            resource="cocineras"
+            id={id}
+            label="cocinera o cocinero"
+          />
           <div className="detail-layout">
             <section className="g-card public-person public-body">
               {data.q && <div className="g-quote">“{data.q}”</div>}
@@ -96,10 +102,21 @@ export default function CocineraDetalle() {
                           )}
                           <p className="g-p">{audio.metadatos.description}</p>
                         </figcaption>
-                        <audio controls preload="none" src={audio.url} />
-                        <p className="foot-note">
-                          {audio.metadatos.credit} · {audio.metadatos.license}
-                        </p>
+                        {audio.url ? (
+                          <audio controls preload="none" src={audio.url} />
+                        ) : (
+                          <p className="foot-note">
+                            Audio pendiente de adjuntar
+                          </p>
+                        )}
+                        {(audio.metadatos.credit ||
+                          audio.metadatos.license) && (
+                          <p className="foot-note">
+                            {[audio.metadatos.credit, audio.metadatos.license]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </p>
+                        )}
                       </figure>
                     ),
                   )}
@@ -127,7 +144,7 @@ export default function CocineraDetalle() {
               )}
               {!!data.fu?.length && (
                 <>
-                  <h3>Verificación y respaldo</h3>
+                  <h3>Fuentes</h3>
                   {data.fu.map((source, i) => (
                     <p className="g-p" key={i}>
                       {source}
@@ -161,7 +178,9 @@ export default function CocineraDetalle() {
                   </span>
                 )}
                 <div>
-                  <span className="g-tag ok">Verificada</span>
+                  <span className={`g-tag ${data.v ? "ok" : "warn"}`}>
+                    {data.v ? "Verificada" : "Sin verificar"}
+                  </span>
                   <h3>{data.n}</h3>
                   <p className="g-sm">{data.rol}</p>
                 </div>

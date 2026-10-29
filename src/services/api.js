@@ -5,6 +5,7 @@ import cocinerasData from "../data/cocineras.json";
 import declaratoriasData from "../data/declaratorias.json";
 import grafoData from "../data/grafo.json";
 import analiticaData from "../data/analitica.json";
+import { demoSnapshot } from "./demoStore.js";
 
 const copy = (value) => JSON.parse(JSON.stringify(value));
 const byId = (items, id) =>
@@ -14,12 +15,41 @@ const byId = (items, id) =>
 export const usesDatabase = import.meta.env.VITE_DATA_SOURCE === "database";
 export const sourceLabel = usesDatabase
   ? "Contenido publicado"
-  : "Datos de demostración";
+  : "Demo local · Los registros se guardan en este navegador";
 const normalize = (value) =>
   value
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
+// Buscar texto de la ficha, sin incluir los bytes de fotos ni de audios.
+const searchText = (r) =>
+  normalize(
+    [
+      r.n,
+      r.d,
+      r.bio,
+      r.rol,
+      r.m,
+      r.p,
+      r.e,
+      r.community,
+      r.address,
+      r.org,
+      r.es,
+      ...(r.esp || []),
+      ...(r.languages || []),
+      ...(r.fu || []),
+      ...(r.lin || []),
+      ...(r.prod || []),
+      ...(r.services || []),
+      ...(r.sourceReferences || []),
+      ...(r.ing || []).flat(),
+      ...(r.relations || []).map((x) => x.name),
+      ...(r.oralRecords || []).map((x) => x.title),
+    ]
+      .filter(Boolean)
+      .join(" "),
+  );
 async function request(path, { missing = false } = {}) {
   const response = await fetch(`/api/${path}`, {
     headers: { Accept: "application/json" },
@@ -42,8 +72,8 @@ async function catalog(resource, { query = "", offset = 0, limit = 12 } = {}) {
     return request(
       `${resource}?${new URLSearchParams({ q: query, offset, limit })}`,
     );
-  const filtered = (demos[resource] || []).filter((item) =>
-    normalize(JSON.stringify(item)).includes(normalize(query)),
+  const filtered = ((await demoSnapshot())[resource] || []).filter((item) =>
+    searchText(item).includes(normalize(query)),
   );
   return {
     items: copy(filtered.slice(offset, offset + limit)),
@@ -53,9 +83,43 @@ async function catalog(resource, { query = "", offset = 0, limit = 12 } = {}) {
 const detail = async (resource, id) =>
   usesDatabase
     ? request(`${resource}/${encodeURIComponent(id)}`, { missing: true })
-    : copy(byId(demos[resource], id) ?? null);
-export const getInicioData = async () =>
-  usesDatabase ? request("inicio") : copy(analiticaData);
+    : copy(byId((await demoSnapshot())[resource] || [], id) ?? null);
+export const getInicioData = async () => {
+  if (usesDatabase) return request("inicio");
+  const all = await demoSnapshot(),
+    result = copy(analiticaData);
+  const counts = [
+    all.ingredientes.length,
+    all.recetas.length,
+    all.mercados.length,
+    all.cocineras.length,
+    all["proteccion-legal"].length,
+    new Set(
+      [...all.recetas, ...all.mercados, ...all.cocineras]
+        .map((r) => r.municipalityCode || r.m || r.p)
+        .filter(Boolean),
+    ).size,
+  ];
+  result.kpis = result.kpis.map((k, i) => ({
+    ...k,
+    value: String(counts[i]),
+    delta: "Registros del demo local",
+  }));
+  result.verificaciones = [...all.recetas, ...all.mercados, ...all.cocineras]
+    .filter((r) => r.v)
+    .slice(-5)
+    .reverse()
+    .map((r) => ({
+      name: r.n,
+      municipality: r.m || r.p,
+      verified: true,
+      type: { recetas: "receta", mercados: "mercado", cocineras: "coc" }[
+        r.resource
+      ],
+      date: r.verifiedAt || "Demo",
+    }));
+  return result;
+};
 export const getRecetas = (options) => catalog("recetas", options);
 export const getRecetaById = (id) => detail("recetas", id);
 export const getMercados = (options) => catalog("mercados", options);
@@ -83,7 +147,8 @@ export const getLegalSummary = async () =>
         municipios: 32,
         actualizado: "2024-05-12",
       };
-export const getMapData = () => request("mapa");
+export const getMapData = () =>
+  usesDatabase ? request("mapa") : getMunicipalMap();
 export const mapTypes = [
   { key: "ingrediente", label: "Ingredientes", color: "#4F7A4A" },
   { key: "receta", label: "Recetas", color: "#C1531E" },
@@ -130,7 +195,8 @@ export async function getMunicipalMap({
       cocineras: "persona",
       "proteccion-legal": "instrumento",
     };
-  const records = Object.entries(demos)
+  const records = Object.entries(await demoSnapshot())
+    .filter(([resource]) => typeByResource[resource])
     .flatMap(([resource, rows]) =>
       rows.map((r) => ({
         ...copy(r),
@@ -141,14 +207,16 @@ export async function getMunicipalMap({
     .filter(
       (r) =>
         types.includes(r.type) &&
-        normalize(JSON.stringify(r)).includes(normalize(query)) &&
-        !from &&
-        !to,
+        searchText(r).includes(normalize(query)) &&
+        (!from || (r.updatedAt || "") >= from) &&
+        (!to || (r.updatedAt || "").slice(0, 10) <= to),
     );
   const codeFor = (r) =>
+    r.municipalityCode ||
     geo.features.find(
       (f) =>
-        normalize(f.properties.nomgeo) === normalize(r.m || r.p || "") ||
+        normalize(f.properties.nomgeo) ===
+          normalize((r.m || r.p || "").replace(/, Puebla$/, "")) ||
         (f.properties.cvegeo === "21114" &&
           ["puebla de zaragoza", "puebla"].includes(
             normalize(r.m || r.p || ""),
@@ -170,7 +238,14 @@ export async function getMunicipalMap({
         counts: {},
       },
     })),
-    points: [],
+    points: selected
+      .filter((r) => r.type === "mercado" && r.coordinates?.length === 2)
+      .map((r) => ({
+        type: "Feature",
+        id: r.id,
+        geometry: { type: "Point", coordinates: r.coordinates },
+        properties: { nombre: r.n, tipo: r.type },
+      })),
     records: selected,
     total: selected.length,
     mapped: selected.filter(codeFor).length,
@@ -179,8 +254,12 @@ export async function getMunicipalMap({
 }
 export const getPodcasts = (options) => catalog("podcasts", options);
 export const getEpisodes = (options) => catalog("episodios", options);
-export const getPublicRecord = (id) =>
-  request(`registros/${encodeURIComponent(id)}`, { missing: true });
+export const getPublicRecord = async (id) =>
+  usesDatabase
+    ? request(`registros/${encodeURIComponent(id)}`, { missing: true })
+    : Object.values(await demoSnapshot())
+        .flat()
+        .find((r) => r.id === id) || null;
 export const getInstitutional = async () =>
   usesDatabase
     ? request("institucional?limit=50")
@@ -194,20 +273,22 @@ export async function searchRecords({
     return request(
       `buscar?${new URLSearchParams({ q: query, offset, limit })}`,
     );
-  const items = Object.entries(demos).flatMap(([resource, records]) =>
-    records.map((record) => ({
-      ...record,
-      to: `/${resource}/${record.id}`,
-      typeLabel: {
-        recetas: "Receta",
-        mercados: "Mercado",
-        cocineras: "Cocinera o cocinero",
-        "proteccion-legal": "Protección legal",
-      }[resource],
-    })),
-  );
+  const items = Object.entries(await demoSnapshot())
+    .filter(([resource]) => resource in demos)
+    .flatMap(([resource, records]) =>
+      records.map((record) => ({
+        ...record,
+        to: `/${resource}/${record.id}`,
+        typeLabel: {
+          recetas: "Receta",
+          mercados: "Mercado",
+          cocineras: "Cocinera o cocinero",
+          "proteccion-legal": "Protección legal",
+        }[resource],
+      })),
+    );
   const filtered = items.filter((item) =>
-    normalize(JSON.stringify(item)).includes(normalize(query)),
+    searchText(item).includes(normalize(query)),
   );
   return {
     items: copy(filtered.slice(offset, offset + limit)),

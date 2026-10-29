@@ -14,6 +14,10 @@ export default function MunicipalMap({
   onSelect,
   compact = false,
   selectionOnly = false,
+  focusSelected = false,
+  onPickPoint,
+  selectedPoint,
+  selectionHint = "Selecciona el municipio en el mapa o en la lista. La ficha se vincula al municipio, sin publicar una ubicación personal precisa.",
 }) {
   const [view, setView] = useState(BASE),
     [hover, setHover] = useState(null);
@@ -66,12 +70,39 @@ export default function MunicipalMap({
     return {
       features: features.map((f) => ({ ...f, path: path(f) })),
       project,
+      unproject: ([x, y]) => [
+        west + (x - ox) / scale,
+        north - (y - oy) / scale,
+      ],
       max: Math.max(1, ...features.map((f) => Number(f.properties.total || 0))),
     };
   }, [data]);
+  useEffect(() => {
+    if (!focusSelected || !selected || !drawing) return;
+    const f = drawing.features.find((f) => f.properties.code === selected);
+    if (!f) return;
+    const points = pointsOf(f).map(drawing.project);
+    const xs = points.map((p) => p[0]),
+      ys = points.map((p) => p[1]);
+    const w = Math.min(
+      BASE.w,
+      Math.max(
+        90,
+        Math.max(...xs) - Math.min(...xs) + 35,
+        ((Math.max(...ys) - Math.min(...ys) + 35) * BASE.w) / BASE.h,
+      ),
+    );
+    const h = (w * BASE.h) / BASE.w;
+    setView({
+      x: (Math.min(...xs) + Math.max(...xs) - w) / 2,
+      y: (Math.min(...ys) + Math.max(...ys) - h) / 2,
+      w,
+      h,
+    });
+  }, [drawing, selected, focusSelected]);
   function zoom(factor) {
     setView((v) => {
-      const w = Math.max(BASE.w / 6, Math.min(BASE.w, v.w * factor)),
+      const w = Math.max(BASE.w / 20, Math.min(BASE.w, v.w * factor)),
         h = (w * BASE.h) / BASE.w;
       return { x: v.x + (v.w - w) / 2, y: v.y + (v.h - h) / 2, w, h };
     });
@@ -168,7 +199,17 @@ export default function MunicipalMap({
                 onMouseLeave={() => setHover(null)}
                 onFocus={() => setHover(p)}
                 onBlur={() => setHover(null)}
-                onClick={() => onSelect?.(p.code)}
+                onClick={(e) => {
+                  if (onPickPoint) {
+                    const point = svg.current.createSVGPoint();
+                    point.x = e.clientX;
+                    point.y = e.clientY;
+                    const local = point.matrixTransform(
+                      svg.current.getScreenCTM().inverse(),
+                    );
+                    onPickPoint(drawing.unproject([local.x, local.y]), p.code);
+                  } else onSelect?.(p.code);
+                }}
                 onKeyDown={(e) => {
                   if (["Enter", " "].includes(e.key)) {
                     e.preventDefault();
@@ -204,6 +245,23 @@ export default function MunicipalMap({
               </a>
             );
           })}
+          {selectedPoint?.length === 2 &&
+            (() => {
+              const [x, y] = drawing.project(selectedPoint);
+              return (
+                <g pointerEvents="none" aria-label="Ubicación seleccionada">
+                  <circle
+                    cx={x}
+                    cy={y}
+                    r={(7 * view.w) / 620}
+                    fill="#C1531E"
+                    stroke="#fff"
+                    strokeWidth={(2 * view.w) / 620}
+                  />
+                  <circle cx={x} cy={y} r={(2 * view.w) / 620} fill="#fff" />
+                </g>
+              );
+            })()}
         </svg>
         <div className="map-toolbar" aria-label="Controles del mapa">
           <button
@@ -241,10 +299,7 @@ export default function MunicipalMap({
         )}
       </div>
       {selectionOnly ? (
-        <p className="foot-note">
-          Selecciona el municipio en el mapa o en la lista. La ficha se vincula
-          al municipio, sin publicar una ubicación personal precisa.
-        </p>
+        <p className="foot-note">{selectionHint}</p>
       ) : (
         <div className="municipal-legend">
           <span>

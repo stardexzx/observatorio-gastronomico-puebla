@@ -1,14 +1,32 @@
 # Observatorio Gastronómico de Puebla
 
-Frontend React/Vite con el diseño y el mapa de navegación del primer repositorio, conectado al esquema PostgreSQL/PostGIS del archivo `observador-gastronomico (2).zip` mediante una API pública de consulta y un área editorial autenticada para cocineras y cocineros.
+Frontend React/Vite con el diseño y la navegación aceptados. **La etapa actual es un demo local con la base PostgreSQL desconectada.** Permite registrar y editar cocineras y cocineros, recetas y mercados desde Administración o desde cada catálogo.
 
-## Ejecutar con PostgreSQL
+## Iniciar el demo
+
+Requisitos: Node.js 20.19+ o 22.12+ y npm. No requiere Docker, PostgreSQL ni iniciar la API.
+
+```bash
+npm ci
+npm run dev:demo
+```
+
+`npm run dev` y `npm run build` fuerzan el demo incluso si existe un `.env` de la integración anterior. Para compilar: `npm run build`; para revisar la compilación: `npm run preview`.
+
+Los registros, borradores, fotografías y audios se guardan en este navegador y sobreviven a las recargas. Las relaciones se eligen en listas con búsqueda; si falta una receta, persona o mercado se puede registrar y volver al formulario anterior sin perderlo. Los mapas permiten elegir el origen municipal y marcar la ubicación aproximada de mercados.
+
+Administración ofrece una copia JSON de los registros locales. Los datos no se comparten entre dispositivos y borrar los datos del sitio los elimina. Consulta [la guía del demo y la procedencia exacta de los campos](docs/DEMO_LOCAL.md).
+
+Las secciones siguientes documentan la integración PostgreSQL anterior, conservada como referencia. No se aplica a la nueva base de datos que se conectará más adelante.
+
+## Integración anterior con PostgreSQL (desconectada)
 
 Requisitos: Node.js 20.19+ o 22.12+ (validado con 24.19), npm, Docker y Docker Compose.
 
 ```bash
 npm ci
 npm run configurar
+# Solo para la integración anterior: VITE_DATA_SOURCE=database en .env
 npm run db:up
 npm run dev
 ```
@@ -23,7 +41,7 @@ El ZIP contiene el esquema y los catálogos auxiliares, **sin fichas publicadas 
 npm run dev:demo
 ```
 
-El modo de demostración conserva los JSON originales y muestra una etiqueta que los identifica. En el modo `database`, una caída de la API muestra un error; no cambia silenciosamente a datos ficticios. La selección se realiza con `VITE_DATA_SOURCE=database` o `demo`. Al cambiarla, reinicia Vite; para producción, vuelve a compilar.
+El demo actual incorpora los JSON como referencias iniciales y guarda las altas y ediciones en el navegador. Consulta la guía del demo local; las funciones de PostgreSQL descritas abajo pertenecen a la integración anterior. En el modo `database`, una caída de la API muestra un error; no cambia silenciosamente a datos ficticios. La selección se realiza con `VITE_DATA_SOURCE=database` o `demo`. Al cambiarla, reinicia Vite; para producción, vuelve a compilar.
 
 ## Qué quedó conectado
 
@@ -40,7 +58,7 @@ Se conservan los grupos **Inicio, Explorar, Conocer el Observatorio, Comunidad y
 
 `/admin` contiene ahora la captura autenticada de cocineras, cocineros y colectivos. Usa las credenciales locales `EDITOR_EMAIL` y `EDITOR_PASSWORD`, guardadas de forma privada en `.env`. La cuenta inicial se crea una vez y los reinicios no restauran permisos retirados. La edición utiliza una conexión PostgreSQL separada de la consulta pública.
 
-Memoria, experiencias, captura de otros tipos de registro y administración de usuarios/roles siguen pendientes. Los formularios combinan los campos de `observatorio-pruebas (1).html` con el diseño aceptado de `OGP_Mockup_navegacion.html`; ver [criterios y referencias](docs/REFERENCIAS.md).
+En la integración anterior con PostgreSQL, memoria, experiencias, captura de otros tipos de registro y administración de usuarios/roles siguen pendientes. Los formularios combinan los campos de `observatorio-pruebas (1).html` con el diseño aceptado de `OGP_Mockup_navegacion.html`; ver [criterios y referencias](docs/REFERENCIAS.md).
 
 ## Base de datos existente
 

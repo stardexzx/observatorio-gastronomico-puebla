@@ -36,3 +36,9 @@ Conservar cabecera, menús, grupos, colores y organización de filtros/resultado
 - Mantener el modo de demostración identificado y el resto de rutas existentes.
 
 No incluye migrar todos los módulos de captura de recetas/ingredientes, generar todos los formatos de reportes ni completar memoria y experiencias. Esas funciones quedan como referencia para solicitudes posteriores.
+
+## Alcance actualizado: demo local con formularios nuevos
+
+La instrucción posterior del usuario sustituye los criterios de captura anteriores: se deja desconectada la base de datos, el registro de personas se basa en la imagen de la ficha de Victoria Contreras aportada en el chat y los registros nuevos de recetas y mercados se basan exclusivamente en `OGP_Mockup_navegacion.html`. El HTML de pruebas y el SQL anterior no determinan los campos ni las validaciones de estos formularios.
+
+Se conserva la cartografía ya extraída, con su atribución indicada arriba. Los vínculos se seleccionan entre registros locales y permiten crear el registro que falta y retornar al borrador. La implementación y su persistencia se describen en [DEMO_LOCAL.md](DEMO_LOCAL.md).
