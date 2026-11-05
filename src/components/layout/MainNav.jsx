@@ -12,7 +12,7 @@ const groups = [
     { to: '/proteccion-legal', label: 'Protección legal', icon: 'shield', tag: 'Público', tagClass: 'tag-pub' },
   ]},
   { id: 'conocer', label: 'Conocer el Observatorio', links: [
-    { to: '/memoria', label: 'Memoria histórica', icon: 'history', tag: 'Por definir', tagClass: 'tag-tech' },
+    { to: '/memoria', label: 'Línea de tiempo', icon: 'history', tag: 'Interactiva', tagClass: 'tag-pub' },
     { to: '/acerca', label: 'Acerca del Observatorio', icon: 'info', tag: 'Público', tagClass: 'tag-pub' },
   ]},
   { id: 'comunidad', label: 'Comunidad', links: [
@@ -31,7 +31,7 @@ export default function MainNav() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [downloadError, setDownloadError] = useState('');
   const activePath = location.pathname;
-  const pathMatches = (to) => activePath === to || activePath.startsWith(`${to}/`);
+  const pathMatches = (to) => activePath === to || activePath.startsWith(`${to}/`) || (to === '/memoria' && activePath === '/linea-de-tiempo');
 
   useEffect(() => { setOpenGroup(''); setMobileOpen(false); }, [location.pathname]);
   useEffect(() => {

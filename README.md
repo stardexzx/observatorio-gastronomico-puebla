@@ -102,3 +102,19 @@ npm run preview
 Vite y su preview reenvían `/api` a la API local. En un despliegue real, sirve `dist` con fallback a `index.html` para las rutas React y reenvía `/api` a `server/index.mjs` mediante el proxy del servidor. La API escucha en loopback. Configura TLS del proxy y de PostgreSQL según tu proveedor, manteniendo la verificación de certificados. Conserva el host de origen al reenviar las solicitudes a la API y establece `COOKIE_SECURE=1` para las sesiones editoriales en HTTPS.
 
 Los procesos no se conservan al restaurar una máquina: inicia de nuevo la base y `npm run dev`. No subas `.env` ni los datos del volumen a Git.
+
+## Línea de tiempo de gastronomía poblana
+
+Disponible en **Conocer el Observatorio → Línea de tiempo**, en `/memoria` y también en `/linea-de-tiempo`. Es un recorrido educativo local con cinco épocas y doce hitos inspirado en la referencia visual proporcionada. No consulta la API ni necesita PostgreSQL para mostrar su contenido.
+
+Selecciona una época para consultar sus hitos; usa los botones anterior/siguiente para recorrer la historia completa. Las pestañas aceptan flechas izquierda/derecha, Inicio y Fin. La búsqueda encuentra años, ingredientes y platillos en los títulos y detalles. El enlace de cada hito conserva la selección en la dirección de la página y permite volver a ella al recargar o usar el historial.
+
+Las ilustraciones vectoriales se incluyen en el proyecto y funcionan sin descargas externas. Los relatos tradicionales se identifican como tales; el hito de 2010 enlaza con la inscripción oficial de la cocina tradicional mexicana en la UNESCO. La cronología se edita en `src/data/timeline.js`.
+
+Comprobación funcional, con Vite iniciado en modo demo y Python Playwright/Chromium disponibles:
+
+```bash
+npm run dev:demo -- --host 127.0.0.1 --port 5181
+# En otra terminal:
+python tests/timeline_browser.py http://127.0.0.1:5181
+```

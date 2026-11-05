@@ -23,7 +23,7 @@ Los tres scripts del ZIP se conservan en `database/` sin modificar su contenido.
 
 La integración conserva el logo, el tema CSS, las ilustraciones y los menús. No importa un segundo diseño: el ZIP únicamente contiene SQL. El mapa mantiene su forma esquemática y no se presenta como cartografía precisa. Los contadores de PostgreSQL no usan las cifras ilustrativas del mockup.
 
-Los procedimientos de escritura/editoriales permanecen en la base para una futura capa autenticada. Memoria histórica y experiencias no tienen un modelo específico en el SQL adjunto; mantienen sus rutas pendientes.
+Los procedimientos de escritura/editoriales permanecen en la base para una futura capa autenticada. Experiencias no tiene un modelo específico en el SQL adjunto y mantiene su ruta pendiente. Memoria histórica incorpora ahora una línea de tiempo educativa local, independiente del esquema SQL.
 
 
 ## Captura de cocineras y cartografía municipal

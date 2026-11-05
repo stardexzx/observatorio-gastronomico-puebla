@@ -17,6 +17,7 @@ import Recetas from "./pages/Recetas.jsx";
 import RedConocimiento from "./pages/RedConocimiento.jsx";
 import Reportes from "./pages/Reportes.jsx";
 import VistasPendientes from "./pages/VistasPendientes.jsx";
+import LineaDeTiempo from "./pages/LineaDeTiempo.jsx";
 import { sourceLabel, usesDatabase } from "./services/api.js";
 import Buscar from "./pages/Buscar.jsx";
 import FichaPublica from "./pages/FichaPublica.jsx";
@@ -77,15 +78,8 @@ export default function App() {
               element={usesDatabase ? <ReportesPublicos /> : <Reportes />}
             />
             <Route path="/acerca" element={<AcercaDe />} />
-            <Route
-              path="/memoria"
-              element={
-                <VistasPendientes
-                  title="Memoria histórica"
-                  description="El archivo histórico reunirá fuentes, recetarios y testimonios vinculados con la cocina poblana."
-                />
-              }
-            />
+            <Route path="/memoria" element={<LineaDeTiempo />} />
+            <Route path="/linea-de-tiempo" element={<LineaDeTiempo />} />
             <Route path="/podcast" element={<Podcast />} />
             <Route path="/buscar" element={<Buscar />} />
             <Route path="/registro/:id" element={<FichaPublica />} />

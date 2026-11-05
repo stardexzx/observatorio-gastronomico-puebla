@@ -5,7 +5,7 @@ const labels = [
   ['/mapa', 'Explorar', 'Mapa'], ['/recetas', 'Explorar', 'Recetas'], ['/mercados', 'Explorar', 'Mercados'],
   ['/cocineras', 'Explorar', 'Cocineras y Cocineros'], ['/proteccion-legal', 'Explorar', 'Protección legal'],
   ['/red-conocimiento', 'Datos y Análisis', 'Red de conocimiento'], ['/reportes', 'Datos y Análisis', 'Reportes'],
-  ['/acerca', 'Conocer el Observatorio', 'Acerca del Observatorio'], ['/memoria', 'Conocer el Observatorio', 'Memoria histórica'],
+  ['/acerca', 'Conocer el Observatorio', 'Acerca del Observatorio'], ['/memoria', 'Conocer el Observatorio', 'Línea de tiempo'], ['/linea-de-tiempo', 'Conocer el Observatorio', 'Línea de tiempo'],
   ['/podcast', 'Comunidad', 'Podcast'], ['/experiencias', 'Comunidad', 'Experiencias de turistas'], ['/admin', 'Administración', 'Administración'],
 ];
 export default function Breadcrumb() {
