@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { getMunicipalGeometry } from "../../services/api.js";
-import useRemoteData from "../../pages/useRemoteData.js";
+import useRemoteData from "../../legacy-pages/useRemoteData.js";
 import MunicipalMap from "../map/MunicipalMap.jsx";
 export default function TerritoryPicker({ value, onChange }) {
   const result = useRemoteData(getMunicipalGeometry, []);

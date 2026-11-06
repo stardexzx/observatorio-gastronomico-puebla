@@ -1,5 +1,8 @@
+"use client";
+
 import React, { useEffect, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { usePathname } from 'next/navigation';
+import { Link } from '../../next-router.jsx';
 import Icon from '../../assets/icons.jsx';
 import { getReportData, usesDatabase } from '../../services/api.js';
 
@@ -26,14 +29,16 @@ const groups = [
 ];
 
 export default function MainNav() {
-  const location = useLocation();
+  const activePath = usePathname() || '/';
+  return <NavigationMenu key={activePath} activePath={activePath}/>;
+}
+
+function NavigationMenu({ activePath }) {
   const [openGroup, setOpenGroup] = useState('');
   const [mobileOpen, setMobileOpen] = useState(false);
   const [downloadError, setDownloadError] = useState('');
-  const activePath = location.pathname;
   const pathMatches = (to) => activePath === to || activePath.startsWith(`${to}/`) || (to === '/memoria' && activePath === '/linea-de-tiempo');
 
-  useEffect(() => { setOpenGroup(''); setMobileOpen(false); }, [location.pathname]);
   useEffect(() => {
     const close = (event) => { if (!event.target.closest('.mainnav')) setOpenGroup(''); };
     const toggle = () => setMobileOpen((open) => !open);

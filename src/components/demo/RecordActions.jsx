@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link } from "../../next-router.jsx";
 import { usesDatabase } from "../../services/api.js";
 export default function RecordActions({ resource, id, label }) {
   if (usesDatabase) return null;

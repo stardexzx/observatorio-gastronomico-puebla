@@ -1,8 +1,12 @@
-import { Link } from "react-router-dom";
+import { Link } from "../../next-router.jsx";
 export function SourceNote({ record }) {
   return (
     <p className="foot-note">
-      {record.source === "database"
+      {record.catalogOrigin === "author"
+        ? record.storage === "postgres"
+          ? "Ficha de captura guardada en la base local del Observatorio. Las ilustraciones son representativas."
+          : "Catálogo local de demostración. Los cambios se conservan en este navegador."
+        : record.source === "database"
         ? "Versión publicada y revisada por el Observatorio. Las ilustraciones son representaciones de la interfaz."
         : record.seeded
           ? "Referencia ilustrativa del mockup, disponible en este demo."

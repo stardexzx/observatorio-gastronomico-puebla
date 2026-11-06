@@ -1,9 +1,10 @@
 -- Observatorio Gastronómico de Puebla
--- PostgreSQL 16+ / PostGIS 3.x.
+-- PostgreSQL 16+ / PostGIS 3.x. Base nueva; instalación atómica.
 BEGIN;
 
 -- ===== 001_schema.sql =====
 -- Migración inicial: PostgreSQL 16+ y PostGIS 3.x.
+-- Ejecutar únicamente sobre una base nueva. No es un script de reinicialización.
 CREATE EXTENSION IF NOT EXISTS postgis;
 CREATE EXTENSION IF NOT EXISTS btree_gist;
 CREATE SCHEMA ogp;

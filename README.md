@@ -1,120 +1,78 @@
 # Observatorio Gastronómico de Puebla
 
-Frontend React/Vite con el diseño y la navegación aceptados. **La etapa actual es un demo local con la base PostgreSQL desconectada.** Permite registrar y editar cocineras y cocineros, recetas y mercados desde Administración o desde cada catálogo.
+Aplicación unificada basada en la entrega del creador de la base de datos. Su panel Next.js, modelos, formularios de recetas/ingredientes/cocineras, podcast, recetarios PDF y autenticación tienen prioridad cuando coinciden con la aplicación anterior. Se conservan los módulos propios de mercados, protección legal, mapa independiente, red de conocimiento, búsqueda y línea de tiempo.
 
-## Iniciar el demo
+## Iniciar en Windows o Linux
 
-Requisitos: Node.js 20.19+ o 22.12+ y npm. No requiere Docker, PostgreSQL ni iniciar la API.
-
-```bash
-npm ci
-npm run dev:demo
-```
-
-`npm run dev` y `npm run build` fuerzan el demo incluso si existe un `.env` de la integración anterior. Para compilar: `npm run build`; para revisar la compilación: `npm run preview`.
-
-Los registros, borradores, fotografías y audios se guardan en este navegador y sobreviven a las recargas. Las relaciones se eligen en listas con búsqueda; si falta una receta, persona o mercado se puede registrar y volver al formulario anterior sin perderlo. Los mapas permiten elegir el origen municipal y marcar la ubicación aproximada de mercados.
-
-Administración ofrece una copia JSON de los registros locales. Los datos no se comparten entre dispositivos y borrar los datos del sitio los elimina. Consulta [la guía del demo y la procedencia exacta de los campos](docs/DEMO_LOCAL.md).
-
-Las secciones siguientes documentan la integración PostgreSQL anterior, conservada como referencia. No se aplica a la nueva base de datos que se conectará más adelante.
-
-## Integración anterior con PostgreSQL (desconectada)
-
-Requisitos: Node.js 20.19+ o 22.12+ (validado con 24.19), npm, Docker y Docker Compose.
+Requisitos: Node.js **22.13 o superior**, npm y Docker Desktop con el motor Linux iniciado. Los comandos se ejecutan desde la raíz de este repositorio, donde está `package.json`.
 
 ```bash
 npm ci
 npm run configurar
-# Solo para la integración anterior: VITE_DATA_SOURCE=database en .env
 npm run db:up
+npm run auth:setup -- tu_correo@dominio.com
 npm run dev
 ```
 
-`configurar` genera `.env` con contraseñas aleatorias para desarrollo. Nunca sobrescribe un archivo existente. `db:up` inicia PostgreSQL 16/PostGIS 3.5; en un volumen nuevo instala el esquema original y después aplica las migraciones de consulta, captura y cartografía. Importa los 217 municipios incluidos en el HTML de referencia y conserva las geometrías existentes. `dev` inicia la API y Vite; usa la dirección que indique Vite. Para detener la base conservando sus datos: `npm run db:stop`.
+`auth:setup` entrega un enlace de activación de un solo uso para la primera cuenta administradora. Con el servidor iniciado, abre ese enlace, establece tu contraseña e inicia sesión en **http://localhost:5173**. No existe una contraseña predeterminada. La activación inicial no cambia una cuenta que ya haya sido activada.
 
-El ZIP contiene el esquema y los catálogos auxiliares, **sin fichas publicadas ni una segunda interfaz**. Por eso una instalación nueva muestra colecciones vacías y contadores en cero. Los datos sintéticos de las pruebas viven en bases temporales separadas que se eliminan al terminar. No se presentan los mocks como publicaciones reales.
+`configurar` crea `.env.local` con una contraseña de PostgreSQL aleatoria sin sobrescribir configuraciones existentes. La configuración anterior `.env` no se usa para este panel. `db:up` prepara una base local independiente en el puerto **55433**, con el volumen **ogp_unificado_data**: no borra los volúmenes ni las bases del observatorio anterior. No se crean recetas, cuentas ni personas de demostración durante la inicialización. Los módulos con ejemplos visuales de la entrega siguen conservando esos ejemplos como material de demostración.
 
-## Revisar el diseño sin base de datos
+Si Windows bloquea el puerto, cambia **POSTGRES_PORT y el puerto de DATABASE_URL** en `.env.local` al mismo valor libre. Las contraseñas se aplican al crear el volumen; modificar el archivo no cambia una contraseña de PostgreSQL ya instalada. Consulta [el arranque completo para Windows](docs/ARRANQUE_WINDOWS.md).
+
+Para conservar los datos al detener PostgreSQL: `npm run db:stop`. Para compilar y ejecutar la compilación:
 
 ```bash
-npm run dev:demo
+npm run build
+npm start
 ```
 
-El demo actual incorpora los JSON como referencias iniciales y guarda las altas y ediciones en el navegador. Consulta la guía del demo local; las funciones de PostgreSQL descritas abajo pertenecen a la integración anterior. En el modo `database`, una caída de la API muestra un error; no cambia silenciosamente a datos ficticios. La selección se realiza con `VITE_DATA_SOURCE=database` o `demo`. Al cambiarla, reinicia Vite; para producción, vuelve a compilar.
+Desarrollo y compilación usan el mismo servidor Next.js de Node. No requieren Bash, Cloudflare ni una cuenta de Sites.
 
-## Qué quedó conectado
+Si ya ejecutaste la entrega del autor, puedes reutilizar su `.env.local` y su PostgreSQL: ejecuta `npm run db:migrate` y `npm run dev`, sin crear otra cuenta. La guía de Windows incluye este caso.
 
-- Recetas: búsqueda, paginación, ingredientes y cantidades, pasos, técnicas, fuentes y relaciones públicas.
-- Mercados: catálogo, fichas, horarios, dirección y coordenadas publicadas.
-- Cocineras y cocineros: registro, borradores, revisión, consentimiento y publicación reales; campos de ambos HTML, fotografías e historia oral persistentes. [Guía de captura](docs/CAPTURA_COCINERAS.md).
-- Protección legal: instrumentos publicados, situación, autoridad y fuentes.
-- Mapa: 217 municipios, selección desde la captura, capas por tipo, búsqueda, periodo de publicación, zoom y apertura de fichas. Los conteos se calculan en PostgreSQL y los puntos precisos se reservan a coordenadas públicas documentadas.
-- Red de conocimiento: relaciones públicas; por defecto una subred de las 24 publicaciones más recientes y sus conexiones. `?registro=UUID` centra la consulta en una ficha.
-- Inicio y reportes: conteos y evolución mensual de las versiones públicas activas. Descarga de indicadores en JSON.
-- Búsqueda global, podcasts/episodios y contenido institucional «Acerca».
+## Prioridad de las dos entregas
 
-Se conservan los grupos **Inicio, Explorar, Conocer el Observatorio, Comunidad y Datos y Análisis**, además de las rutas existentes. Las rutas auxiliares `/buscar` y `/registro/:id` permiten abrir resultados sin reorganizar los menús.
+| Área | Versión integrada |
+| --- | --- |
+| Panel, navegación y estilos generales | Entrega del creador de la BD |
+| Recetas y su editor | Entrega del creador; borradores guardados en PostgreSQL |
+| Ingredientes, cocineras y podcast | Entrega del creador; almacenamiento local de sus formularios |
+| Recetarios PDF | Entrega del creador |
+| Usuarios, roles y acceso | Sesiones y cuentas de la entrega del creador |
+| Mercados y tianguis | Catálogo, ficha y captura anteriores dentro del panel nuevo |
+| Protección legal, búsqueda y red | Módulos anteriores adaptados a los catálogos unificados |
+| Mapa | Mapa del resumen del creador y mapa independiente conservado en `/mapa` |
+| Memoria histórica | Línea de tiempo de cinco épocas y doce hitos; `/memoria` y `/linea-de-tiempo` |
+| Datos complementarios de cocineras | Memoria oral, linaje, colectivo, establecimientos y vínculos conservados como campos adicionales |
 
-`/admin` contiene ahora la captura autenticada de cocineras, cocineros y colectivos. Usa las credenciales locales `EDITOR_EMAIL` y `EDITOR_PASSWORD`, guardadas de forma privada en `.env`. La cuenta inicial se crea una vez y los reinicios no restauran permisos retirados. La edición utiliza una conexión PostgreSQL separada de la consulta pública.
+El esquema de dominio del autor coincide con el esquema existente. El inicializador instala `ogp` solo cuando no existe y añade las migraciones de acceso y formularios del panel de forma transaccional e idempotente. No reinstala tablas ya existentes ni elimina información. Conserva los SQL y la implementación anterior como referencia en el historial y las carpetas heredadas.
 
-En la integración anterior con PostgreSQL, memoria, experiencias, captura de otros tipos de registro y administración de usuarios/roles siguen pendientes. Los formularios combinan los campos de `observatorio-pruebas (1).html` con el diseño aceptado de `OGP_Mockup_navegacion.html`; ver [criterios y referencias](docs/REFERENCIAS.md).
+## Datos anteriores y procedencia
 
-## Base de datos existente
+En **Acervo → Registros anteriores** puedes revisar los registros del navegador de la versión anterior y descargar un respaldo. La importación es explícita: las fichas coincidentes por nombre conservan la versión del creador; las recetas importadas se crean como borradores con los permisos de la cuenta actual. Los registros incompletos requieren completar sus datos antes de importarlos. No se convierten ejemplos ni estados de interfaz en publicaciones verificadas.
 
-1. Si la base está vacía, instala `database/observatorio_puebla.sql` con un administrador. El script original crea el esquema `ogp`; no lo vuelvas a ejecutar sobre un esquema existente.
-2. Ejecuta `database/public_api.sql`. Es una extensión de lectura que se puede volver a aplicar.
-3. Crea un login PostgreSQL y concédele el rol `ogp_lector`. Configura su contraseña de forma segura con `\password` en psql.
-4. Configura `DATABASE_URL` en `.env` con ese login. No uses una cuenta administradora para servir la web. Las credenciales de la base nunca llevan prefijo `VITE_`.
+Los almacenes del navegador pertenecen a su dominio y puerto: para recuperar registros anteriores debes abrir el panel en el mismo navegador y origen donde se capturaron. No se borran automáticamente los almacenes antiguos. Los adjuntos que antes se guardaron con una URL temporal necesitan volver a adjuntarse si esa URL ya venció. La entrega del autor usa almacenamiento distinto para sus módulos; no todos los formularios se guardan en PostgreSQL. Los indicadores generales, rankings y ejemplos de los módulos del autor siguen siendo ilustrativos y no deben interpretarse como un censo de la base.
 
-Para habilitar además la captura y la capa municipal sobre una base existente, completa las variables `EDITOR_*`, define `ADMIN_DATABASE_URL` con acceso de migración a esa misma base y ejecuta `npm run db:migrate`. La API utiliza después sus conexiones de lectura/edición; no la conexión administradora. El script conserva el SQL original y las geometrías ya documentadas.
-
-Las contraseñas generadas por `configurar` solo se aplican al crear el volumen. Cambiar `.env` no modifica usuarios de una base ya inicializada. Para otro puerto local, cambia `POSTGRES_PORT` y el puerto de `DATABASE_URL`; `API_PORT` controla el puerto de la API.
-
-La consulta pública usa `v_fichas_publicas` y un rol de lectura sin acceso a tablas privadas ni escritura. La captura usa otro rol de base de datos, sesiones autenticadas, comprobación del origen y los permisos del actor de la sesión; no acepta actores ni SQL enviados por el cliente.
+Consulta [los criterios de integración](docs/INTEGRACION_AUTOR.md), el [README original de la entrega](docs/README_ENTREGA_AUTOR.md) y sus documentos conservados en `docs/autor/`. Los textos originales que describen otras formas de arranque no sustituyen los comandos de este README.
 
 ## Comprobaciones
 
 ```bash
-npm test                  # Contrato HTTP, validación y manejo de errores
-npm run db:test           # Pruebas de integridad originales, con ROLLBACK
-npm run test:db           # Integración pública y editorial en bases temporales
+npm test
+npm run check
+npm run lint
 npm run build
+# Prueba completa con Docker y Playwright instalados:
+npm run test:integration
 ```
 
-La integración crea bases `ogp_test_*` y `ogp_editor_test_*`, instala el esquema desde cero, publica registros sintéticos y prueba lectura, búsqueda, paginación, mapa, indicadores, permisos y retirada de contenidos. Requiere el administrador de desarrollo generado por `configurar`; no debe ejecutarse con credenciales de producción.
+Las pruebas de navegador requieren Playwright y Chromium. Las pruebas de integración deben usar una base aislada y credenciales de prueba; nunca datos de producción. Los scripts históricos de `tests/` que arrancaban Vite/PostgreSQL por separado documentan la versión anterior y no son el flujo actual del panel.
 
-Para incluir la comprobación de escritorio y móvil del navegador, instala Python Playwright y Chromium (ya disponibles en el entorno en la nube) y ejecuta:
+## Recetario PDF
 
-```bash
-OGP_BROWSER_TESTS=1 npm run test:db
-```
+La entrega incluye el lector y la referencia «Puebla, la cocina de México», pero el ZIP no contiene su archivo PDF. La biblioteca muestra esa ausencia sin intentar abrir un libro inexistente. Para habilitarlo, incorpora el archivo real autorizado como `assets/recetarios/cocina-dig-2.pdf` y recarga el panel. No se agregó un PDF ficticio.
 
-## Compilación y despliegue
+## Línea de tiempo
 
-```bash
-npm run build
-npm run api
-# En otra terminal:
-npm run preview
-```
-
-Vite y su preview reenvían `/api` a la API local. En un despliegue real, sirve `dist` con fallback a `index.html` para las rutas React y reenvía `/api` a `server/index.mjs` mediante el proxy del servidor. La API escucha en loopback. Configura TLS del proxy y de PostgreSQL según tu proveedor, manteniendo la verificación de certificados. Conserva el host de origen al reenviar las solicitudes a la API y establece `COOKIE_SECURE=1` para las sesiones editoriales en HTTPS.
-
-Los procesos no se conservan al restaurar una máquina: inicia de nuevo la base y `npm run dev`. No subas `.env` ni los datos del volumen a Git.
-
-## Línea de tiempo de gastronomía poblana
-
-Disponible en **Conocer el Observatorio → Línea de tiempo**, en `/memoria` y también en `/linea-de-tiempo`. Es un recorrido educativo local con cinco épocas y doce hitos inspirado en la referencia visual proporcionada. No consulta la API ni necesita PostgreSQL para mostrar su contenido.
-
-Selecciona una época para consultar sus hitos; usa los botones anterior/siguiente para recorrer la historia completa. Las pestañas aceptan flechas izquierda/derecha, Inicio y Fin. La búsqueda encuentra años, ingredientes y platillos en los títulos y detalles. El enlace de cada hito conserva la selección en la dirección de la página y permite volver a ella al recargar o usar el historial.
-
-Las ilustraciones vectoriales se incluyen en el proyecto y funcionan sin descargas externas. Los relatos tradicionales se identifican como tales; el hito de 2010 enlaza con la inscripción oficial de la cocina tradicional mexicana en la UNESCO. La cronología se edita en `src/data/timeline.js`.
-
-Comprobación funcional, con Vite iniciado en modo demo y Python Playwright/Chromium disponibles:
-
-```bash
-npm run dev:demo -- --host 127.0.0.1 --port 5181
-# En otra terminal:
-python tests/timeline_browser.py http://127.0.0.1:5181
-```
+Selecciona una época o recorre sus hitos con anterior/siguiente. La búsqueda encuentra años, ingredientes y platillos, y el enlace conserva la época y el hito al recargar. Las ilustraciones vectoriales son locales; los relatos tradicionales se distinguen de hechos documentados y el hito UNESCO enlaza a la inscripción de la cocina tradicional mexicana.

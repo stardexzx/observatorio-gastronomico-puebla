@@ -1,0 +1,27 @@
+.auth-page { display:grid; grid-template-columns:1fr 1fr; min-height:100dvh; padding:24px; gap:24px; background:white; font-family:"Archivo","Segoe UI",system-ui,sans-serif; }
+.auth-form-side { display:flex; flex-direction:column; min-width:0; padding:18px 9%; }
+.auth-brand { display:flex; align-items:center; gap:13px; color:#001B62; }
+.auth-brand>span { max-width:240px; font-size:16px; font-weight:600; line-height:1.4; }
+.auth-brand small { display:block; color:#001B62b3; font-size:12px; font-weight:400; }
+.auth-card { width:100%; max-width:400px; margin:auto; padding:55px 0; }
+.auth-card h1 { font-size:34px; letter-spacing:-.035em; }
+.auth-card :global(.acervo-input) { background:white; border-color:#A9D2ED; }
+.auth-card :global(.acervo-primary) { border-radius:10px; background:#033AA5; color:#FFFFFF; box-shadow:0 4px 12px #033AA514; }
+.auth-card :global(.acervo-primary):hover { background:#001B62; }
+.auth-card h1,.auth-card :global(.acervo-label) { color:#001B62; }
+.auth-card p { color:#001B62b3; }
+.auth-card span,.auth-card :global(.relative)>button { color:#033AA5; }
+.auth-card :global(.acervo-input) { color:#001B62; }
+.auth-card :global(.acervo-input)::placeholder { color:#001B6280; }
+.auth-card :global(.acervo-input):focus { border-color:#2789D1; box-shadow:0 0 0 3px #2789D11a; }
+.auth-card [role="alert"] { background:#EF703C1a; color:#001B62; border-left:3px solid #EF703C; }
+.auth-card button:focus-visible { outline:2px solid #2789D1; outline-offset:3px; }
+.auth-photo { position:relative; min-height:620px; overflow:hidden; border-radius:26px; background:#A9D2ED; }
+.auth-photo>img { object-position:53% center; }
+.auth-photo::after { content:""; position:absolute; inset:0; background:linear-gradient(180deg,#001B6208 25%,#001B6215 48%,#001B62e6 100%); }
+.auth-photo-caption { position:absolute; z-index:1; bottom:8%; left:9%; right:7%; color:white; }
+.auth-photo-caption>span { font-size:10px; letter-spacing:.2em; }
+.auth-photo-caption h2 { margin:16px 0; font-size:clamp(30px,3.5vw,54px); line-height:1.13; letter-spacing:-.035em; font-weight:500; }
+.auth-photo-caption p { font-size:12px; line-height:1.9; color:#ffffffe0; }
+@media(min-width:1600px) { .auth-page { padding:32px; }.auth-form-side { padding:24px 14%; } }
+@media(max-width:800px) { .auth-page { display:block; padding:28px 24px; }.auth-form-side { min-height:calc(100dvh - 56px); padding:0; }.auth-photo { display:none; }.auth-card { padding:52px 0; }.auth-brand>span { font-size:15px; } }

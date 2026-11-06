@@ -1,0 +1,53 @@
+.shell { min-height:100dvh; background:#f5f7fa; color:#001B62; }
+.reader { max-width:1360px; margin:auto; }
+.heading { display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:22px; }
+.eyebrow { display:block; margin-bottom:8px; font-size:9px; letter-spacing:.19em; color:#033AA5; font-weight:600; }
+.heading h1 { margin:0; font-size:29px; font-weight:600; letter-spacing:-.035em; line-height:1.2; }
+.heading p { margin-top:8px; font-size:12px; color:#001B6280; }
+.readOnly { display:flex; align-items:center; gap:7px; padding:7px 11px; border:1px solid #A9D2ED99; border-radius:20px; font-size:10px; color:#033AA5; }
+.toolbar { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; padding:14px 19px; border:1px solid #A9D2ED77; border-radius:12px 12px 0 0; background:white; }
+.bookTitle { display:flex; align-items:center; gap:11px; min-width:0; }
+.bookTitle>svg { color:#033AA5; flex-shrink:0; }
+.bookTitle select { max-width:340px; width:100%; color:#001B62; background:transparent; font-size:12px; font-weight:500; padding-right:8px; outline-color:#2789D1; }
+.bookTitle span { display:block; margin-top:5px; font-size:10px; color:#001B6280; }
+.tools { display:flex; align-items:center; gap:5px; }
+.tools button { min-width:30px; min-height:30px; display:flex; align-items:center; justify-content:center; gap:6px; border-radius:6px; padding:5px 7px; font-size:10px; color:#033AA5; }
+.tools button:hover { background:#A9D2ED26; }
+.tools button[aria-pressed=true] { background:#A9D2ED26; }
+.tools i { height:18px; width:1px; background:#A9D2ED77; margin:0 5px; }
+.reader button:disabled { opacity:.35; cursor:default; }
+.reader button:focus-visible,.reader input:focus-visible,.stage:focus-visible { outline:2px solid #2789D1; outline-offset:3px; }
+.stage { position:relative; min-height:420px; border:1px solid #A9D2ED77; border-top:0; border-bottom:0; background:radial-gradient(ellipse at 50% 40%,#e8edf4,#dce4ee); }
+.bookScroller { width:100%; overflow:auto; padding:30px 24px 36px; }
+.openBook { display:flex; width:max-content; margin:auto; align-items:flex-start; position:relative; background:#fff; border-radius:3px 6px 6px 3px; border-bottom:5px solid #001B62; border-left:4px solid #001B62; border-right:4px solid #001B62; box-shadow:0 13px 30px #001B6220,0 3px 3px #001B6226; animation:turnForward .35s ease-out; }
+.openBook::after { content:""; position:absolute; inset:auto 2px -3px; height:3px; border-top:1px solid #A9D2ED; background:#fff; pointer-events:none; }
+.backwards { animation-name:turnBack; }
+.paper { position:relative; background:#fff; }
+.left::after { content:""; position:absolute; z-index:2; right:0; top:0; bottom:0; width:36px; background:linear-gradient(90deg,transparent,#001B620c 70%,#001B622b); pointer-events:none; }
+.right::after { content:""; position:absolute; z-index:2; left:0; top:0; bottom:0; width:28px; background:linear-gradient(90deg,#001B6220,#001B6206 60%,transparent); pointer-events:none; }
+.single { border-radius:3px 8px 8px 3px; }
+.single .paper::before { content:""; position:absolute; z-index:2; left:0; top:0; bottom:0; width:13px; background:linear-gradient(90deg,#001B6226,transparent); pointer-events:none; }
+.sheet { position:relative; min-width:1px; min-height:1px; background:white; }
+.sheet canvas { display:block; }
+.sheetLoading { position:absolute; inset:0; display:flex; justify-content:center; align-items:center; font-size:12px; color:#033AA5; padding:20px; text-align:center; }
+.pageNumber { position:absolute; bottom:-22px; left:50%; transform:translateX(-50%); font-size:9px; color:#001B6280; }
+.footer { border:1px solid #A9D2ED77; border-top:0; border-radius:0 0 12px 12px; background:white; padding:15px 20px; }
+.pageControls { display:flex; align-items:center; justify-content:center; gap:26px; }
+.pageControls>button { display:flex; align-items:center; justify-content:center; gap:7px; border:1px solid #A9D2ED99; border-radius:7px; padding:7px 10px; font-size:11px; color:#033AA5; }
+.pageControls form { display:flex; align-items:center; gap:7px; font-size:10px; color:#001B6280; }
+.pageControls input { width:48px; border:1px solid #A9D2ED99; border-radius:6px; text-align:center; padding:6px 2px; color:#001B62; background:white; appearance:textfield; }
+.pageControls form button { border:0; color:#033AA5; padding:4px; }
+.readingProgress { max-width:460px; margin:14px auto 0; text-align:center; }
+.readingProgress>div { height:3px; overflow:hidden; border-radius:3px; background:#A9D2ED33; }
+.readingProgress>div>span { display:block; height:100%; border-radius:3px; background:#033AA5; transition:width .25s; }
+.readingProgress p { font-size:9px; margin-top:9px; color:#001B6280; }
+.empty { min-height:430px; display:flex; align-items:center; justify-content:center; flex-direction:column; padding:30px; gap:13px; text-align:center; color:#033AA5; }
+.empty h2 { font-size:18px; color:#001B62; font-weight:500; }
+.empty p { font-size:12px; color:#001B6280; }
+.empty button { display:flex; align-items:center; gap:7px; padding:10px 16px; background:white; border:1px solid #A9D2ED; border-radius:8px; font-size:11px; }
+.fullscreen { background:#f5f7fa; padding:20px; max-width:none; overflow:auto; height:100dvh; }
+.fullscreen .heading { display:none; }
+@keyframes turnForward { from { opacity:.35; transform:perspective(1600px) rotateY(-4deg) translateX(8px); } to { opacity:1; transform:none; } }
+@keyframes turnBack { from { opacity:.35; transform:perspective(1600px) rotateY(4deg) translateX(-8px); } to { opacity:1; transform:none; } }
+@media(max-width:800px) { .toolbar { padding:12px; gap:12px; }.bookTitle { flex:1; min-width:200px; }.bookTitle select { max-width:260px; }.tools { width:100%; justify-content:flex-end; border-top:1px solid #A9D2ED55; padding-top:8px; }.tools button:first-child { margin-right:auto; }.bookScroller { padding:24px 20px 30px; }.pageControls { gap:12px; }.pageControls>button span { display:none; }.readingProgress span { display:none; }.readOnly { display:none; }.heading h1 { font-size:26px; }.footer { padding:14px 12px; } }
+@media(prefers-reduced-motion:reduce) { .openBook { animation:none; }.readingProgress>div>span { transition:none; } }

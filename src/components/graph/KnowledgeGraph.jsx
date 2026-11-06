@@ -1,16 +1,17 @@
-import { Link } from 'react-router-dom';
+import { Link } from '../../next-router.jsx';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 const COLORS = { ing:'#4F7A4A', rec:'#C1531E', mer:'#D89A2E', coc:'#10284C', leg:'#B23A1F', mun:'#3E6FA8' };
+const emptyNodes = [];
 export default function KnowledgeGraph({ graph }) {
-  const svgRef=useRef(null); const dragRef=useRef(null); const [selected,setSelected]=useState('mole'); const [positions,setPositions]=useState({});
-  useEffect(()=>{ if(graph?.nodes) setPositions(Object.fromEntries(graph.nodes.map(n=>[n.id,{x:n.x,y:n.y}]))); },[graph]);
+  const svgRef=useRef(null); const dragRef=useRef(null); const [selected,setSelected]=useState('mole'); const [dragged,setDragged]=useState({graph:null,positions:{}});
+  const positions=dragged.graph===graph?dragged.positions:{};
   useEffect(()=>{
-    const move=(event)=>{ if(!dragRef.current||!svgRef.current)return; const rect=svgRef.current.getBoundingClientRect(); const p=dragRef.current; const x=(event.clientX-rect.left)/rect.width*760, y=(event.clientY-rect.top)/rect.height*480; setPositions(current=>({...current,[p.id]:{x:p.x+(x-p.startX),y:p.y+(y-p.startY)}})); };
+    const move=(event)=>{ if(!dragRef.current||!svgRef.current)return; const rect=svgRef.current.getBoundingClientRect(); const p=dragRef.current; const x=(event.clientX-rect.left)/rect.width*760, y=(event.clientY-rect.top)/rect.height*480; setDragged(current=>({graph,positions:{...(current.graph===graph?current.positions:{}),[p.id]:{x:p.x+(x-p.startX),y:p.y+(y-p.startY)}}})); };
     const up=()=>{dragRef.current=null;};
     window.addEventListener('pointermove',move); window.addEventListener('pointerup',up);
     return ()=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);};
-  },[]);
-  const nodes=graph?.nodes||[]; const edges=graph?.edges||[]; const byId=useMemo(()=>Object.fromEntries(nodes.map(n=>[n.id,n])),[nodes]);
+  },[graph]);
+  const nodes=graph?.nodes||emptyNodes; const edges=graph?.edges||[]; const byId=useMemo(()=>Object.fromEntries(nodes.map(n=>[n.id,n])),[nodes]);
   if(!nodes.length) return <div className="empty-state">No hay nodos para mostrar.</div>;
   const pos=(id)=>positions[id]||byId[id];
   return <div className="g-graph"><svg ref={svgRef} className="g-graph-svg" viewBox="0 0 760 480" onPointerLeave={()=>{}}>

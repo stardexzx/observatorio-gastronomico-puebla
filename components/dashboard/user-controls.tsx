@@ -1,0 +1,17 @@
+"use client";
+import { useState } from "react";
+import Link from "next/link";
+import { Bell, ChevronDown, LogOut, ShieldCheck } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useSessionUser } from "@/components/auth/session-provider";
+import { applicationRoles } from "@/data/roles";
+export function UserControls(){
+ const user=useSessionUser();
+ const [profileOpen,setProfileOpen]=useState(false);
+ const [busy,setBusy]=useState(false);const [error,setError]=useState('');
+ const name=(user?.name?.trim()||'Equipo de investigación').replace(/(^|[\s-])(\p{L})/gu,(_,separator:string,letter:string)=>separator+letter.toLocaleUpperCase('es-MX'));
+ const initial=Array.from(name)[0].toLocaleUpperCase('es-MX');
+ const logout=async()=>{if(busy)return;setBusy(true);setError('');try{const response=await fetch('/api/auth/logout',{method:'POST',headers:{'Content-Type':'application/json'}});if(!response.ok)throw new Error();window.location.replace('/iniciar-sesion');}catch{setError('No se pudo cerrar sesión. Vuelve a intentarlo.');setBusy(false);}};
+ return <div className="flex items-center gap-2"><Popover><PopoverTrigger asChild><button type="button" aria-label="Notificaciones" title="Notificaciones" className="admin-icon-button"><Bell className="size-[18px]"/></button></PopoverTrigger><PopoverContent align="end" sideOffset={16} className="w-64 rounded-xl"><h2 className="text-xs font-semibold">Notificaciones</h2><p className="mt-2 text-xs leading-relaxed text-[#8190a4]">No tienes notificaciones nuevas.</p></PopoverContent></Popover>
+ <Popover open={profileOpen} onOpenChange={setProfileOpen}><PopoverTrigger asChild><button type="button" aria-label="Abrir menú de usuario" title={name} className="flex items-center gap-1.5 rounded-lg p-1 transition hover:bg-[#f5f8fb]"><span className="grid size-8 place-items-center rounded-full bg-[#A9D2ED]/30 text-[11px] font-semibold text-[#033AA5]">{initial}</span><ChevronDown className="size-3 text-[#8a97a9]"/></button></PopoverTrigger><PopoverContent align="end" sideOffset={16} className="w-72 rounded-xl"><div className="flex items-start gap-3"><span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-full bg-[#A9D2ED]/30 text-sm font-semibold text-[#033AA5]">{initial}</span><div className="min-w-0 flex-1"><p className="break-words text-xs font-semibold text-[#001B62]">{name}</p>{user&&<><p className="mt-1 break-all text-[11px] text-[#001B62]/65">{user.email}</p><p className="mt-1 text-[11px] text-[#001B62]/65">{applicationRoles.find(role=>role.id===user.role)?.name}</p></>}</div></div><div className="mt-3 border-t pt-2">{user?.role==='administrador'&&<Link href="/administracion/roles" onClick={()=>setProfileOpen(false)} className="flex items-center gap-3 rounded-lg p-2.5 text-xs text-[#52647d] transition hover:bg-[#eef8fb] hover:text-[#1684a5]"><ShieldCheck className="size-4"/>Roles y permisos</Link>}<button type="button" disabled={busy} onClick={logout} className="flex w-full items-center gap-3 rounded-lg p-2.5 text-xs text-[#52647d] hover:bg-[#f5f8fb]"><LogOut className="size-4"/>{busy?'Cerrando sesión…':'Cerrar sesión'}</button></div>{error&&<p role="alert" className="mt-2 text-xs text-red-600">{error}</p>}</PopoverContent></Popover></div>;
+}

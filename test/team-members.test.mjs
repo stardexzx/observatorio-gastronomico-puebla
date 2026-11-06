@@ -1,0 +1,41 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import ts from 'typescript';
+const compile = source => ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
+const dataUrl = source => `data:text/javascript;base64,${Buffer.from(source).toString('base64')}`;
+const roleUrl = dataUrl(compile(await readFile(new URL('../data/roles.ts',import.meta.url),'utf8')));
+const memberSource = compile(await readFile(new URL('../data/team-members.ts',import.meta.url),'utf8')).replace('"./roles"',JSON.stringify(roleUrl));
+const {readMembers,saveMember,assignMemberRole} = await import(dataUrl(memberSource));
+const {defaultAccess,normalizeAccess} = await import(roleUrl);
+
+test('member creation, duplicate protection, individual and bulk role assignments persist',()=>{
+  const values=new Map();
+  globalThis.window={localStorage:{getItem:key=>values.get(key)??null,setItem:(key,value)=>values.set(key,value)}};
+  assert.deepEqual(readMembers(),[]);
+  let list=saveMember({name:'Persona A',email:'A@example.test',role:null});
+  const a=list[0];
+  assert.equal(a.email,'a@example.test');
+  assert.throws(()=>saveMember({name:'Duplicado',email:'a@EXAMPLE.test',role:'revisor'}),/ya está registrado/);
+  list=saveMember({name:'Persona B',email:'b@example.test',role:'capturista'});
+  list=assignMemberRole(list.map(member=>member.id),'revisor');
+  assert.ok(readMembers().every(member=>member.role==='revisor'));
+  list=assignMemberRole([a.id],null);
+  assert.equal(list.find(member=>member.id===a.id).role,null);
+  list=saveMember({...a,name:'Persona editada',role:'administrador'});
+  assert.equal(list.length,2);
+  assert.equal(list.find(member=>member.id===a.id).name,'Persona editada');
+  assert.throws(()=>assignMemberRole(['missing'],'revisor'),/Selecciona personas/);
+  assert.throws(()=>assignMemberRole([a.id],'publicador'),/rol válido/);
+  const before=readMembers();
+  window.localStorage.setItem=()=>{throw new Error('QuotaExceededError');};
+  assert.throws(()=>assignMemberRole([a.id],'capturista'),/QuotaExceededError/);
+  assert.deepEqual(readMembers(),before);
+});
+test('access configuration preserves saved choices and fixes administration to its role',()=>{
+  const matrix=defaultAccess();matrix.recetas.capturista=false;
+  matrix.roles.administrador=false;matrix.roles.revisor=true;
+  const normalized=normalizeAccess(matrix);
+  assert.equal(normalized.recetas.capturista,false);
+  assert.deepEqual(normalized.roles,{administrador:true,capturista:false,revisor:false});
+});

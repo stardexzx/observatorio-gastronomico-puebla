@@ -1,6 +1,6 @@
 import { useNavigate, Link } from "react-router-dom";
 import { getMunicipalMap } from "../../services/api.js";
-import useRemoteData from "../../pages/useRemoteData.js";
+import useRemoteData from "../../legacy-pages/useRemoteData.js";
 import MunicipalMap from "./MunicipalMap.jsx";
 export default function MunicipalMapPreview() {
   const result = useRemoteData(getMunicipalMap, []),

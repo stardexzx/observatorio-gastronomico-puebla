@@ -4,35 +4,35 @@ import Logo from "./assets/logo.jsx";
 import Breadcrumb from "./components/layout/Breadcrumb.jsx";
 import MainNav from "./components/layout/MainNav.jsx";
 import Topbar from "./components/layout/Topbar.jsx";
-import AcercaDe from "./pages/AcercaDe.jsx";
-import CocineraDetalle from "./pages/CocineraDetalle.jsx";
-import Cocineras from "./pages/Cocineras.jsx";
-import DeclaratoriaDetalle from "./pages/DeclaratoriaDetalle.jsx";
-import Inicio from "./pages/Inicio.jsx";
-import MercadoDetalle from "./pages/MercadoDetalle.jsx";
-import Mercados from "./pages/Mercados.jsx";
-import ProteccionLegal from "./pages/ProteccionLegal.jsx";
-import RecetaDetalle from "./pages/RecetaDetalle.jsx";
-import Recetas from "./pages/Recetas.jsx";
-import RedConocimiento from "./pages/RedConocimiento.jsx";
-import Reportes from "./pages/Reportes.jsx";
-import VistasPendientes from "./pages/VistasPendientes.jsx";
-import LineaDeTiempo from "./pages/LineaDeTiempo.jsx";
+import AcercaDe from "./legacy-pages/AcercaDe.jsx";
+import CocineraDetalle from "./legacy-pages/CocineraDetalle.jsx";
+import Cocineras from "./legacy-pages/Cocineras.jsx";
+import DeclaratoriaDetalle from "./legacy-pages/DeclaratoriaDetalle.jsx";
+import Inicio from "./legacy-pages/Inicio.jsx";
+import MercadoDetalle from "./legacy-pages/MercadoDetalle.jsx";
+import Mercados from "./legacy-pages/Mercados.jsx";
+import ProteccionLegal from "./legacy-pages/ProteccionLegal.jsx";
+import RecetaDetalle from "./legacy-pages/RecetaDetalle.jsx";
+import Recetas from "./legacy-pages/Recetas.jsx";
+import RedConocimiento from "./legacy-pages/RedConocimiento.jsx";
+import Reportes from "./legacy-pages/Reportes.jsx";
+import VistasPendientes from "./legacy-pages/VistasPendientes.jsx";
+import LineaDeTiempo from "./legacy-pages/LineaDeTiempo.jsx";
 import { sourceLabel, usesDatabase } from "./services/api.js";
-import Buscar from "./pages/Buscar.jsx";
-import FichaPublica from "./pages/FichaPublica.jsx";
-import Podcast from "./pages/Podcast.jsx";
-import InicioPublico from "./pages/InicioPublico.jsx";
-import ReportesPublicos from "./pages/ReportesPublicos.jsx";
-import MapaMunicipal from "./pages/MapaMunicipal.jsx";
-import AdminPersonas from "./pages/AdminPersonas.jsx";
-import EditorPersona from "./pages/EditorPersona.jsx";
+import Buscar from "./legacy-pages/Buscar.jsx";
+import FichaPublica from "./legacy-pages/FichaPublica.jsx";
+import Podcast from "./legacy-pages/Podcast.jsx";
+import InicioPublico from "./legacy-pages/InicioPublico.jsx";
+import ReportesPublicos from "./legacy-pages/ReportesPublicos.jsx";
+import MapaMunicipal from "./legacy-pages/MapaMunicipal.jsx";
+import AdminPersonas from "./legacy-pages/AdminPersonas.jsx";
+import EditorPersona from "./legacy-pages/EditorPersona.jsx";
 import {
   EditorSessionProvider,
   RequireEditor,
 } from "./components/editor/EditorSession.jsx";
-import DemoAdmin from "./pages/DemoAdmin.jsx";
-import DemoRecordEditor from "./pages/DemoRecordEditor.jsx";
+import DemoAdmin from "./legacy-pages/DemoAdmin.jsx";
+import DemoRecordEditor from "./legacy-pages/DemoRecordEditor.jsx";
 
 export default function App() {
   const location = useLocation(),

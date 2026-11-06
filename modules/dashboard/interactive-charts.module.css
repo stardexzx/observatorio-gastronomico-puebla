@@ -1,0 +1,35 @@
+.explorer { margin-top:18px; }
+.legend { display:flex; flex-wrap:wrap; gap:7px; margin-bottom:14px; }
+.legend button { display:flex; align-items:center; gap:6px; padding:6px 8px; border:1px solid #A9D2ED66; border-radius:7px; font-size:10px; color:#001B62; background:white; transition:opacity .15s; }
+.legend button[aria-pressed=false] { opacity:.45; text-decoration:line-through; }
+.legend i,.compositionLegend i { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+.controls { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:8px; }
+.dates { display:flex; flex-wrap:wrap; gap:10px; }
+.dates label { display:flex; align-items:center; gap:5px; font-size:10px; color:#001B6280; }
+.dates select { max-width:90px; font-size:10px; padding:5px; border:1px solid #A9D2ED77; border-radius:6px; color:#001B62; background:white; }
+.controlActions { display:flex; align-items:center; gap:10px; }
+.controlActions button,.clear { display:inline-flex; align-items:center; gap:5px; color:#033AA5; font-size:10px; padding:4px 0; }
+.chart { width:100%; min-width:0; height:280px; }
+.hint { font-size:10px; line-height:1.7; color:#001B6280; margin-top:9px; }
+.dataTable { overflow-x:auto; border:1px solid #A9D2ED66; border-radius:9px; margin-top:12px; }
+.dataTable table { width:100%; border-collapse:collapse; white-space:nowrap; font-size:10px; }
+.dataTable caption { text-align:left; padding:10px; font-weight:500; }
+.dataTable th,.dataTable td { padding:9px 10px; border-top:1px solid #A9D2ED44; text-align:right; }
+.dataTable th:first-child { text-align:left; }
+.dataTable thead { background:#A9D2ED14; }
+.composition { margin-top:8px; }
+.donut { position:relative; height:190px; max-width:260px; margin:auto; }
+.donutCenter { pointer-events:none; position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+.donutCenter strong { font-size:28px; font-weight:600; letter-spacing:-.03em; }
+.donutCenter span { font-size:10px; margin-top:3px; color:#001B6280; max-width:114px; text-align:center; }
+.compositionLegend { display:grid; gap:3px; margin-top:8px; }
+.compositionLegend button { display:flex; align-items:center; gap:8px; width:100%; padding:7px; border:1px solid transparent; border-radius:7px; text-align:left; font-size:11px; }
+.compositionLegend button:hover,.compositionLegend button[aria-pressed=true] { background:#A9D2ED22; border-color:#A9D2ED66; }
+.compositionLegend span { color:#001B6299; }
+.compositionLegend strong { margin-left:auto; font-weight:500; }
+.compositionLegend small { width:40px; text-align:right; color:#001B6280; font-size:10px; }
+.selection { display:flex; align-items:center; flex-wrap:wrap; gap:10px; padding:10px 14px; border:1px solid #A9D2ED77; background:#A9D2ED14; border-radius:10px; color:#001B62; font-size:11px; }
+.selection>button:not(:last-child) { border:1px solid #A9D2ED; padding:4px 8px; border-radius:6px; background:white; }
+.explorer button:focus-visible,.composition button:focus-visible,.selection button:focus-visible { outline:2px solid #2789D1; outline-offset:3px; }
+@media(max-width:575px) { .chart { height:240px; }.controlActions { width:100%; justify-content:flex-end; } }
+@media(prefers-reduced-motion:reduce) { .legend button { transition:none; } }

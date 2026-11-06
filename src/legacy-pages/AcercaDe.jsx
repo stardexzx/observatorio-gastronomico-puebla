@@ -1,0 +1,9 @@
+"use client";
+
+import React from 'react';
+import { PageHeader } from './CatalogPage.jsx';
+import Icon from '../assets/icons.jsx';
+import { getInstitutional } from '../services/api.js';
+import useRemoteData from './useRemoteData.js';
+import { Loading } from './CatalogPage.jsx';
+export default function AcercaDe() { const result=useRemoteData(getInstitutional,[]); const about=result.data?.items.find(item=>item.key==='acerca'); return <><PageHeader title="Acerca del Observatorio" description="Una plataforma para documentar, conocer y contribuir a la preservación del patrimonio gastronómico de Puebla."/><div className="g-2"><section className="g-card"><h3><Icon name="info" size={17}/> Propósito</h3><p className="g-p">El Observatorio Gastronómico de Puebla (OGP) reúne registros relacionados con recetas, mercados, ingredientes, cocineras y cocineros tradicionales y mecanismos de protección patrimonial.</p></section><section className="g-card"><h3><Icon name="network" size={17}/> Conocimiento conectado</h3><p className="g-p">Las fichas y relaciones permiten observar el patrimonio como una red viva de personas, territorios, productos, técnicas y memorias.</p></section></div><div className="g-card" style={{marginTop:16}}><h3>{about?.n || "Acerca de esta colección"}</h3><Loading {...result}>{about ? <p className="g-p" style={{whiteSpace:"pre-wrap"}}>{about.d}</p> : <p className="g-p">Los catálogos integrados permiten consultar y vincular la documentación del acervo. Los registros de mercados y protección legal se conservan en este navegador. Las referencias de demostración se identifican en sus fichas.</p>}</Loading></div></>; }

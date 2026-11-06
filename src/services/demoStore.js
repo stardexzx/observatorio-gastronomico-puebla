@@ -2,6 +2,8 @@ import recetas from "../data/recetas.json";
 import mercados from "../data/mercados.json";
 import cocineras from "../data/cocineras.json";
 import legales from "../data/declaratorias.json";
+import { loadAuthorCatalogs, readLegacyMappings } from "../../lib/integration/catalogs";
+import { buildUnifiedCatalogs } from "../../lib/integration/records";
 
 export const DEMO_EVENT = "ogp:demo-changed";
 export const resources = {
@@ -214,6 +216,8 @@ export async function listDemoRecords(resource) {
   return (await rawDemoRecords()).filter((r) => r.resource === resource);
 }
 export async function getDemoRecord(resource, id) {
+  if (resource === "mercados")
+    return (await demoSnapshot()).mercados.find((r) => r.id === String(id)) || null;
   return (
     (await listDemoRecords(resource)).find((r) => r.id === String(id)) || null
   );
@@ -222,8 +226,11 @@ function announce() {
   window.dispatchEvent(new Event(DEMO_EVENT));
 }
 export async function saveDemoRecord(resource, data) {
+  if (["recetas", "cocineras", "ingredientes"].includes(resource))
+    throw new Error("Abre este registro en su catálogo para usar el formulario actual.");
   await ready();
   const all = await rawDemoRecords();
+  const available = Object.values(await demoSnapshot()).flat();
   const id = data.id || crypto.randomUUID();
   const previous = all.find((r) => r.resource === resource && r.id === id);
   if (!data.n?.trim()) throw new Error("Escribe el nombre del registro.");
@@ -250,7 +257,7 @@ export async function saveDemoRecord(resource, data) {
   for (const [field, kind] of Object.entries(expected))
     for (const target of data[field] || []) {
       if (
-        !all.some((r) => r.resource === kind && r.id === target) ||
+        !available.some((r) => r.resource === kind && r.id === target) ||
         (kind === resource && target === id)
       )
         throw new Error(
@@ -270,7 +277,7 @@ export async function saveDemoRecord(resource, data) {
   const relatedUpdates = [];
   for (const [field, kind, reverse] of reciprocal[resource] || [])
     for (const target of all.filter(
-      (r) => r.resource === kind && r.key !== record.key,
+      (r) => r.resource === kind && r.key !== record.key && !["recetas", "cocineras", "ingredientes"].includes(kind),
     )) {
       const linked = (record[field] || []).includes(target.id);
       if (linked === (target[reverse] || []).includes(record.id)) continue;
@@ -311,7 +318,7 @@ export async function clearDemoDraft(key) {
 }
 export async function demoSnapshot() {
   const all = await rawDemoRecords();
-  const groups = Object.fromEntries(
+  const legacyGroups = Object.fromEntries(
     [
       ...Object.keys(resources),
       "proteccion-legal",
@@ -320,6 +327,7 @@ export async function demoSnapshot() {
       "establecimientos",
     ].map((k) => [k, all.filter((r) => r.resource === k)]),
   );
+  const groups = buildUnifiedCatalogs(legacyGroups, await loadAuthorCatalogs(), readLegacyMappings());
   const lookup = (kind, id) => groups[kind]?.find((r) => r.id === id);
   const pair = (kind, ids) =>
     (ids || []).map((id) => lookup(kind, id)).filter(Boolean);
@@ -335,7 +343,7 @@ export async function demoSnapshot() {
   // Las relaciones se resuelven en ambos sentidos; los nombres se leen del registro vigente.
   for (const kind of Object.keys(resources))
     groups[kind] = groups[kind].map((raw) => {
-      const r = { ...raw, source: "demo", to: `/${kind}/${raw.id}` };
+      const r = { ...raw, source: raw.source || "demo", to: raw.to || `/${kind}/${raw.id}`, resource: kind };
       let recipeIds = r.recipeIds || [],
         marketIds = r.marketIds || [],
         personIds = r.personIds || [];
@@ -361,9 +369,10 @@ export async function demoSnapshot() {
         r.mer = marketIds.length;
         r.ins = pair("recetas", recipeIds).map((x) => x.n);
         r.len = r.languages?.join(", ") || r.len || "";
-        r.org = lookup("colectivos", r.collectiveId)?.n || "";
-        r.es = lookup("establecimientos", r.establishmentId)?.n || "";
+        r.org = r.collective || lookup("colectivos", r.collectiveId)?.n || "";
+        r.es = r.establishments?.join(", ") || lookup("establecimientos", r.establishmentId)?.n || "";
         r.lin = [
+          ...(r.culinaryLineage || []),
           ...(r.lineage || []).map((x) =>
             x.personId
               ? `${lookup("cocineras", x.personId)?.n || "Persona"}${x.label ? ` · ${x.label}` : ""}`
@@ -371,7 +380,7 @@ export async function demoSnapshot() {
           ),
           ...pair("cocineras", r.lineagePersonIds).map((x) => x.n),
         ];
-        r.oral = (r.oralRecords || []).map((x) => ({
+        r.oral = (r.oralHistories || r.oralRecords || []).map((x) => ({
           id: x.id,
           url: x.url,
           metadatos: {
@@ -417,7 +426,7 @@ export async function demoSnapshot() {
           ...links("recetas", related),
           ...links("proteccion-legal", r.legalIds),
         ];
-        r.ing = pair("ingredientes", r.ingredientIds).map((x) => [
+        if (r.catalogOrigin !== "author") r.ing = pair("ingredientes", r.ingredientIds).map((x) => [
           x.n,
           r.ingredientNotes?.[x.id] || x.d || "",
         ]);
@@ -440,7 +449,7 @@ export async function demoSnapshot() {
           ...links("recetas", recipeIds),
           ...links("cocineras", personIds),
         ];
-        r.prod = pair("ingredientes", r.ingredientIds).map((x) => x.n);
+        r.prod = unique([...(r.prod || []), ...pair("ingredientes", r.ingredientIds).map((x) => x.n)]);
         r.services ||= r.svc || [];
       }
       r.rel = r.relations?.length || 0;

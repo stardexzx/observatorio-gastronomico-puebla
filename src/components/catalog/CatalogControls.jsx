@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import Icon from '../../assets/icons.jsx';
 import { sourceLabel } from '../../services/api.js';
-import { PAGE_SIZE } from '../../pages/useCatalog.js';
+import { PAGE_SIZE } from '../../legacy-pages/useCatalog.js';
 export function CatalogFilters({ catalog }) {
   const [input, setInput] = useState(catalog.query);
   return <form className="g-filters catalog-filters" role="search" onSubmit={event => { event.preventDefault(); catalog.search(input); }}>

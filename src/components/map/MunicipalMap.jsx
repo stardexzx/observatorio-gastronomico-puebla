@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 const COLORS = ["#EFEADC", "#F6E2B4", "#F1BD66", "#D9772B", "#B23A1F"];
 const BASE = { x: 0, y: 0, w: 620, h: 440 };
 function pointsOf(feature) {
@@ -19,7 +19,7 @@ export default function MunicipalMap({
   selectedPoint,
   selectionHint = "Selecciona el municipio en el mapa o en la lista. La ficha se vincula al municipio, sin publicar una ubicación personal precisa.",
 }) {
-  const [view, setView] = useState(BASE),
+  const [viewport, setViewport] = useState({ focus: BASE, view: BASE }),
     [hover, setHover] = useState(null);
   const svg = useRef(null),
     drag = useRef(null),
@@ -77,10 +77,10 @@ export default function MunicipalMap({
       max: Math.max(1, ...features.map((f) => Number(f.properties.total || 0))),
     };
   }, [data]);
-  useEffect(() => {
-    if (!focusSelected || !selected || !drawing) return;
+  const focusedView = useMemo(() => {
+    if (!focusSelected || !selected || !drawing) return BASE;
     const f = drawing.features.find((f) => f.properties.code === selected);
-    if (!f) return;
+    if (!f) return BASE;
     const points = pointsOf(f).map(drawing.project);
     const xs = points.map((p) => p[0]),
       ys = points.map((p) => p[1]);
@@ -93,20 +93,29 @@ export default function MunicipalMap({
       ),
     );
     const h = (w * BASE.h) / BASE.w;
-    setView({
+    return {
       x: (Math.min(...xs) + Math.max(...xs) - w) / 2,
       y: (Math.min(...ys) + Math.max(...ys) - h) / 2,
       w,
       h,
-    });
+    };
   }, [drawing, selected, focusSelected]);
-  function zoom(factor) {
+  const view = viewport.focus === focusedView ? viewport.view : focusedView;
+  const setView = useCallback((next) => {
+    setViewport((current) => ({
+      focus: focusedView,
+      view: typeof next === "function"
+        ? next(current.focus === focusedView ? current.view : focusedView)
+        : next,
+    }));
+  }, [focusedView]);
+  const zoom = useCallback((factor) => {
     setView((v) => {
       const w = Math.max(BASE.w / 20, Math.min(BASE.w, v.w * factor)),
         h = (w * BASE.h) / BASE.w;
       return { x: v.x + (v.w - w) / 2, y: v.y + (v.h - h) / 2, w, h };
     });
-  }
+  }, [setView]);
   useEffect(() => {
     const el = svg.current;
     if (!el) return;
@@ -116,7 +125,7 @@ export default function MunicipalMap({
     };
     el.addEventListener("wheel", wheel, { passive: false });
     return () => el.removeEventListener("wheel", wheel);
-  }, [drawing]);
+  }, [drawing, zoom]);
   if (!drawing)
     return (
       <div className="empty-state">
