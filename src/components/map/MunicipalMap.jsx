@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Plus, Minus, RotateCcw } from "lucide-react";
-import { MAP_SELECTION_COLOR, mapDensityColor, mapDensityLegend } from "./mapScale.js";
+import { MAP_SELECTION_COLOR, MAP_INTERACTION_COLOR, mapMunicipalityFill, mapDensityLegend } from "./mapScale.js";
 const BASE = { x: 0, y: 0, w: 620, h: 440 };
 function pointsOf(feature) {
   return (
@@ -21,7 +21,8 @@ export default function MunicipalMap({
   selectionHint = "Selecciona el municipio en el mapa o en la lista. La ficha se vincula al municipio, sin publicar una ubicación personal precisa.",
 }) {
   const [viewport, setViewport] = useState({ focus: BASE, view: BASE }),
-    [hover, setHover] = useState(null);
+    [hover, setHover] = useState(null),
+    [focusedCode, setFocusedCode] = useState(null);
   const svg = useRef(null),
     drag = useRef(null),
     ignore = useRef(false);
@@ -133,6 +134,7 @@ export default function MunicipalMap({
         No hay geometrías municipales disponibles.
       </div>
     );
+  const inspected = hover || drawing.features.find(feature => feature.properties.code === focusedCode)?.properties;
   return (
     <div className={`municipal-map ${compact ? "compact" : ""}`}>
       <div className="municipal-canvas">
@@ -184,15 +186,15 @@ export default function MunicipalMap({
             const p = f.properties,
               count = Number(p.total || 0),
               isSelected = selected === p.code,
-              highlighted = isSelected || hover?.code === p.code;
+              highlighted = isSelected || hover?.code === p.code || focusedCode === p.code;
             return (
               <path
                 key={p.code}
                 d={f.path}
                 fill={
-                  selectionOnly && selected === p.code
+                  selectionOnly && highlighted
                     ? "#A9D2ED"
-                    : mapDensityColor(count, drawing.max)
+                    : mapMunicipalityFill(count, drawing.max, highlighted)
                 }
                 stroke={highlighted ? MAP_SELECTION_COLOR : "#fff"}
                 strokeWidth={isSelected ? 3 : highlighted ? 2 : 0.65}
@@ -208,8 +210,8 @@ export default function MunicipalMap({
                 aria-pressed={selected === p.code}
                 onMouseEnter={() => setHover(p)}
                 onMouseLeave={() => setHover(null)}
-                onFocus={() => setHover(p)}
-                onBlur={() => setHover(null)}
+                onFocus={() => setFocusedCode(p.code)}
+                onBlur={() => setFocusedCode(null)}
                 onClick={(e) => {
                   if (onPickPoint) {
                     const point = svg.current.createSVGPoint();
@@ -300,11 +302,11 @@ export default function MunicipalMap({
             <RotateCcw size={17} aria-hidden="true" />
           </button>
         </div>
-        {hover && (
+        {inspected && (
           <div className="municipality-tip" role="status">
-            <b>{hover.name}</b>
+            <b>{inspected.name}</b>
             {!selectionOnly && (
-              <span>{hover.total || 0} registros publicados</span>
+              <span>{inspected.total || 0} registros publicados</span>
             )}
           </div>
         )}
@@ -318,10 +320,11 @@ export default function MunicipalMap({
             vínculo municipal
           </span>
           <div className="municipal-density-legend" aria-label="Registros publicados por municipio">
-            <strong>Registros publicados por municipio</strong>
+            <strong>Azules: registros publicados por municipio</strong>
             <ul>{mapDensityLegend(drawing.max).map(range => <li key={range.min}><i style={{ background: range.color }} aria-hidden="true"/><span>{range.label}</span></li>)}</ul>
           </div>
-          {selected && <p className="municipal-selection" role="status"><i aria-hidden="true"/><span>Municipio seleccionado: <strong>{drawing.features.find(feature => feature.properties.code === selected)?.properties.name || selected}</strong>. El contorno azul indica la selección; el relleno conserva la cantidad de registros.</span></p>}
+          <div className="municipal-interaction-legend"><i style={{background:MAP_INTERACTION_COLOR}} aria-hidden="true"/><span>Naranja: municipio resaltado o seleccionado</span></div>
+          {selected && <p className="municipal-selection" role="status"><i aria-hidden="true"/><span>Municipio seleccionado: <strong>{drawing.features.find(feature => feature.properties.code === selected)?.properties.name || selected}</strong>. El relleno naranja indica la selección; la escala azul representa la cantidad de registros.</span></p>}
         </div>
       )}
     </div>

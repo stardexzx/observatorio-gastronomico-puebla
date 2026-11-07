@@ -1,11 +1,3 @@
-import { Suspense } from "react";
-import { SectionShell } from "@/components/integration/section-shell";
-import DemoAdmin from "@/src/legacy-pages/DemoAdmin.jsx";
+import { PublicMarkets } from "@/modules/public/catalog";
 
-export default function Page() {
-  return <SectionShell activeItem="Mercados y tianguis" legacy>
-    <Suspense fallback={<p role="status">Cargando sección…</p>}>
-      <DemoAdmin resource="mercados" />
-    </Suspense>
-  </SectionShell>;
-}
+export default function Page(){return <PublicMarkets/>;}

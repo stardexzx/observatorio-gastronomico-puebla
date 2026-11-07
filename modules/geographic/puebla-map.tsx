@@ -5,7 +5,7 @@ import { AlertTriangle, MapPinned, RotateCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDashboard } from "@/components/dashboard/dashboard-context";
-import { mapDensityColor, mapDensityLegend, MAP_SELECTION_COLOR } from "@/src/components/map/mapScale.js";
+import { mapMunicipalityFill, mapDensityLegend, MAP_SELECTION_COLOR, MAP_INTERACTION_COLOR } from "@/src/components/map/mapScale.js";
 import { municipalityLabels } from "@/lib/dashboard-view";
 
 type Position = [number, number];
@@ -29,6 +29,7 @@ export function PueblaMap({compact=false,large=false}:{compact?:boolean;large?:b
   const [error,setError]=useState(false);
   const [attempt,setAttempt]=useState(0);
   const [hovered,setHovered]=useState<string|null>(null);
+  const [focusedCode,setFocusedCode]=useState<string|null>(null);
 
   useEffect(()=>{
     let active=true;
@@ -59,16 +60,17 @@ export function PueblaMap({compact=false,large=false}:{compact?:boolean;large?:b
   const maximumCount=Math.max(...Object.values(municipalityCounts),0);
   const legend=mapDensityLegend(maximumCount);
   const activeCode=filters.municipality==="todos"?null:filters.municipality;
+  const inspectedCode=hovered||focusedCode;
   return <div>
     <div className={`relative overflow-hidden rounded-xl border border-slate-200 bg-[#edf3f5]`}>
       <svg viewBox={`0 0 ${map.width} ${map.height}`} className={`block ${mapHeight} w-full`} role="group" aria-label="Mapa municipal de Puebla con 217 áreas geoestadísticas municipales">
-        {map.features.map(({feature,path})=>{const code=feature.properties.cvegeo;const selected=code===activeCode;const highlighted=selected||hovered===code;const count=municipalityCounts[code]||0;return <path key={code} d={path} fill={mapDensityColor(count,maximumCount)} stroke={highlighted?MAP_SELECTION_COLOR:"#ffffff"} strokeWidth={highlighted?2.5:.65} vectorEffect="non-scaling-stroke" fillRule="evenodd" tabIndex={0} role="button" aria-pressed={selected} aria-label={`${feature.properties.nomgeo}, ${count} registros publicados${selected?", municipio seleccionado":""}`} className="cursor-pointer outline-none transition" onMouseEnter={()=>setHovered(code)} onMouseLeave={()=>setHovered(null)} onFocus={()=>setHovered(code)} onBlur={()=>setHovered(null)} onClick={()=>selectMunicipality(selected?"todos":code)} onKeyDown={(event)=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();selectMunicipality(selected?"todos":code)}}}><title>{feature.properties.nomgeo} · {count} registros publicados{selected?" · Seleccionado":""}</title></path>})}
+        {map.features.map(({feature,path})=>{const code=feature.properties.cvegeo;const selected=code===activeCode;const highlighted=selected||hovered===code||focusedCode===code;const count=municipalityCounts[code]||0;return <path key={code} d={path} fill={mapMunicipalityFill(count,maximumCount,highlighted)} stroke={highlighted?MAP_SELECTION_COLOR:"#ffffff"} strokeWidth={highlighted?2.5:.65} vectorEffect="non-scaling-stroke" fillRule="evenodd" tabIndex={0} role="button" aria-pressed={selected} aria-label={`${feature.properties.nomgeo}, ${count} registros publicados${selected?", municipio seleccionado":""}`} className="cursor-pointer outline-none transition" onMouseEnter={()=>setHovered(code)} onMouseLeave={()=>setHovered(null)} onFocus={()=>setFocusedCode(code)} onBlur={()=>setFocusedCode(null)} onClick={()=>selectMunicipality(selected?"todos":code)} onKeyDown={(event)=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();selectMunicipality(selected?"todos":code)}}}><title>{feature.properties.nomgeo} · {count} registros publicados{selected?" · Seleccionado":""}</title></path>})}
       </svg>
-      {hovered&&<div className="pointer-events-none absolute right-3 top-3 rounded-lg bg-[#102f4f] px-3 py-2 text-xs font-semibold text-white shadow-lg"><MapPinned className="mr-1.5 inline size-3.5 text-[#A9D2ED]"/>{municipalityLabels[hovered]} · {municipalityCounts[hovered]||0} registros</div>}
-      {!compact&&<div className="absolute bottom-3 left-3 rounded-lg bg-white/95 px-3 py-2 text-[10px] text-slate-500 shadow-sm"><div className="mb-1 font-semibold text-slate-700">Registros publicados por municipio</div><div className="flex flex-wrap gap-2">{legend.map(range=><span key={range.min} className="inline-flex items-center gap-1"><i className="h-2 w-4 rounded-sm border border-slate-200" style={{background:range.color}}/>{range.label}</span>)}</div></div>}
+      {inspectedCode&&<div className="pointer-events-none absolute right-3 top-3 rounded-lg bg-[#102f4f] px-3 py-2 text-xs font-semibold text-white shadow-lg"><MapPinned className="mr-1.5 inline size-3.5 text-[#A9D2ED]"/>{municipalityLabels[inspectedCode]} · {municipalityCounts[inspectedCode]||0} registros</div>}
+      {!compact&&<div className="absolute bottom-3 left-3 rounded-lg bg-white/95 px-3 py-2 text-[10px] text-slate-500 shadow-sm"><div className="mb-1 font-semibold text-slate-700">Azules: registros publicados por municipio</div><div className="flex flex-wrap gap-2">{legend.map(range=><span key={range.min} className="inline-flex items-center gap-1"><i className="h-2 w-4 rounded-sm border border-slate-200" style={{background:range.color}}/>{range.label}</span>)}</div></div>}
     </div>
     <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[10px] text-slate-500"><span><strong className="text-slate-700">217</strong> municipios · <strong className="text-slate-700">{coverageTarget}</strong> con registros</span>{!compact&&<span>Fuente: INEGI, Marco Geoestadístico dic. 2025</span>}</div>
-    <p className="mt-2 text-[10px] leading-relaxed text-slate-500">Los colores muestran la densidad del territorio para el periodo y la categoría elegidos. El contorno azul identifica el municipio filtrado.</p>
-    {activeCode&&<div className="mt-3 flex flex-wrap items-center gap-3 text-xs"><span className="inline-flex items-center gap-2 text-[#033AA5]"><i className="h-3 w-4 rounded-sm border-2 border-[#033AA5]"/>Municipio seleccionado: {municipalityLabels[activeCode]}</span><button onClick={()=>selectMunicipality("todos")} className="font-semibold text-[#174f78] hover:underline">Quitar filtro</button></div>}
+    <p className="mt-2 text-[10px] leading-relaxed text-slate-500">Los azules muestran la densidad del territorio para el periodo y la categoría elegidos. El naranja resalta el municipio al pasar el cursor o seleccionarlo.</p>
+    {activeCode&&<div className="mt-3 flex flex-wrap items-center gap-3 text-xs"><span className="inline-flex items-center gap-2 text-[#033AA5]"><i className="h-3 w-4 rounded-sm border-2 border-[#033AA5]" style={{background:MAP_INTERACTION_COLOR}}/>Municipio seleccionado: {municipalityLabels[activeCode]}</span><button onClick={()=>selectMunicipality("todos")} className="font-semibold text-[#174f78] hover:underline">Quitar filtro</button></div>}
   </div>;
 }

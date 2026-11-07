@@ -39,7 +39,7 @@ Si ya ejecutaste la entrega del autor, puedes reutilizar su `.env.local` y su Po
 | Ingredientes, cocineras y podcast | Formularios del creador, ahora guardados en PostgreSQL mediante APIs con sesión |
 | Recetarios PDF | Entrega del creador |
 | Usuarios, roles y acceso | Sesiones y cuentas de la entrega del creador |
-| Mercados y tianguis | Apartado público en espera del desarrollo administrativo |
+| Mercados y tianguis | Apartado pendiente en usuario y admin, como en el ZIP; filtro del mapa disponible |
 | Protección legal | Apartado reservado, sin contenido público por ahora |
 | Datos y análisis | Reportes con cifras reales y red de conocimiento de registros publicados |
 | Mapa | Consulta de publicaciones por municipio, conserva colores cartográficos y usa controles del panel |
@@ -91,4 +91,4 @@ Después de actualizar una instalación existente ejecuta `npm run db:migrate` a
 
 El Resumen, los reportes y el mapa consultan el mismo acervo publicado con y sin sesión. Entrar como administrador no añade registros de demostración ni mezcla borradores con las cifras públicas. Para hacer visible una ficha real, el equipo debe revisarla y publicarla desde Acervo.
 
-Los colores de los municipios representan únicamente el número de publicaciones que cumple los filtros. Pasar el cursor, enfocar o seleccionar un municipio conserva su relleno y lo distingue mediante un contorno azul. La leyenda indica los intervalos de cantidad y explica la selección por separado.
+Los tonos azules de los municipios representan el número de publicaciones que cumple los filtros. Como en el ZIP, pasar el cursor, enfocar o seleccionar un municipio rellena toda su superficie con el acento naranja. La leyenda distingue este resaltado de la escala azul de cantidades. Al retirar el cursor o deseleccionar y salir del foco se restaura su color de densidad. La selección no modifica los conteos ni reescala el resto del territorio.

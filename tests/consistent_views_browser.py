@@ -18,30 +18,55 @@ def density_snapshot(page):
     )
 
 
+INTERIOR_POINT = """el=>{
+      const box=el.getBBox();
+      for(let y=1;y<20;y++)for(let x=1;x<20;x++){
+        const p=new DOMPoint(box.x+box.width*x/20,box.y+box.height*y/20);
+        if(el.isPointInFill(p)&&!el.isPointInStroke(p)){
+          const screen=p.matrixTransform(el.getScreenCTM());
+          if(document.elementFromPoint(screen.x,screen.y)===el)return {x:screen.x,y:screen.y};
+        }
+      }
+      throw new Error('No se encontró un punto interior del municipio');
+    }"""
+
+
 def check_zero_selection(page):
     zero = page.locator(".municipal-canvas path[data-record-count='0']").first
     zero.scroll_into_view_if_needed()
     original = zero.evaluate("el=>getComputedStyle(el).fill")
     # Find a point inside the actual polygon rather than relying on its bounding-box centre.
-    location = zero.evaluate("""el=>{
-      const box=el.getBBox();
-      for(let y=1;y<20;y++)for(let x=1;x<20;x++){
-        const p=new DOMPoint(box.x+box.width*x/20,box.y+box.height*y/20);
-        if(el.isPointInFill(p)){const screen=p.matrixTransform(el.getScreenCTM());return {x:screen.x,y:screen.y};}
-      }
-      throw new Error('No se encontró un punto interior del municipio');
-    }""")
+    location = zero.evaluate(INTERIOR_POINT)
     page.mouse.move(location["x"], location["y"])
-    assert zero.evaluate("el=>getComputedStyle(el).fill") == original, "Hover cambió el color de cantidad"
+    expect(zero).to_have_css("fill", "rgb(196, 90, 50)")
     page.mouse.move(0, 0)
+    expect(zero).to_have_css("fill", original)
     zero.focus()
-    assert zero.evaluate("el=>getComputedStyle(el).fill") == original, "El foco cambió la cantidad representada"
-    zero.press("Enter")
+    expect(zero).to_have_css("fill", "rgb(196, 90, 50)")
+    zero.evaluate("el=>el.blur()")
+    expect(zero).to_have_css("fill", original)
+    # Selection from the dropdown must fill the whole shape even without hover or focus.
+    code = zero.get_attribute("data-municipality")
+    page.get_by_label("Municipio del mapa", exact=True).select_option(code)
     expect(zero).to_have_attribute("aria-pressed", "true")
-    assert zero.evaluate("el=>getComputedStyle(el).fill") == original, "Seleccionar un municipio vacío cambió su relleno"
+    expect(zero).to_have_css("fill", "rgb(196, 90, 50)")
     assert zero.evaluate("el=>getComputedStyle(el).stroke") == "rgb(3, 58, 165)"
     expect(page.locator(".municipal-selection")).to_contain_text("Municipio seleccionado")
     expect(page.locator(".public-map aside")).to_contain_text("0 registros encontrados")
+    expect(zero).to_have_attribute("data-record-count", "0")
+    # Keyboard deselection restores density after focus leaves the municipality.
+    zero.focus()
+    zero.press("Enter")
+    expect(zero).to_have_attribute("aria-pressed", "false")
+    zero.evaluate("el=>el.blur()")
+    expect(zero).to_have_css("fill", original)
+    zero.scroll_into_view_if_needed()
+    location = zero.evaluate(INTERIOR_POINT)
+    page.mouse.click(location["x"], location["y"])
+    expect(zero).to_have_attribute("aria-pressed", "true")
+    page.mouse.move(0, 0)
+    zero.evaluate("el=>el.blur()")
+    expect(zero).to_have_css("fill", "rgb(196, 90, 50)")
 
 
 with sync_playwright() as playwright:
@@ -69,13 +94,30 @@ with sync_playwright() as playwright:
         expect(miniature.locator("path[role='button']")).to_have_count(217)
         initial_fills = miniature.locator("path[role='button']").evaluate_all("els=>els.map(el=>getComputedStyle(el).fill)")
         empty_municipality = miniature.locator("path[aria-label*=', 0 registros publicados']").first
+        mini_index = empty_municipality.evaluate("el=>Array.from(el.ownerSVGElement.querySelectorAll('path[role=button]')).indexOf(el)")
         empty_municipality.focus()
+        expect(empty_municipality).to_have_css("fill", "rgb(196, 90, 50)")
         empty_municipality.press("Enter")
         expect(empty_municipality).to_have_attribute("aria-pressed", "true")
-        assert miniature.locator("path[role='button']").evaluate_all("els=>els.map(el=>getComputedStyle(el).fill)") == initial_fills, "El minimapa cambió la escala al seleccionar un municipio"
+        expect(empty_municipality).to_have_css("fill", "rgb(196, 90, 50)")
+        selected_fills = initial_fills.copy()
+        selected_fills[mini_index] = "rgb(196, 90, 50)"
+        assert miniature.locator("path[role='button']").evaluate_all("els=>els.map(el=>getComputedStyle(el).fill)") == selected_fills, "La selección cambió los colores de otros municipios"
         empty_municipality.press("Enter")
         expect(empty_municipality).to_have_attribute("aria-pressed", "false")
+        empty_municipality.evaluate("el=>el.blur()")
+        expect(empty_municipality).to_have_css("fill", initial_fills[mini_index])
+        assert miniature.locator("path[role='button']").evaluate_all("els=>els.map(el=>getComputedStyle(el).fill)") == initial_fills
         expect(counter).to_be_visible()
+        market_routes = ["/mercados", "/mercados/ficha-pendiente"]
+        if label == "equipo":
+            market_routes += ["/admin/mercados", "/admin/mercados/nueva", "/admin/mercados/ficha-pendiente"]
+        for route in market_routes:
+            page.goto(origin + route, wait_until="networkidle")
+            expect(page.locator("main")).to_contain_text("Próximamente, mercados y tianguis")
+            expect(page.locator("main form")).to_have_count(0)
+            expect(page.locator("main .legacy-module")).to_have_count(0)
+            expect(page.get_by_role("button", name="Nuevo mercado", exact=True)).to_have_count(0)
         page.goto(origin + "/reportes", wait_until="networkidle")
         expect(page.get_by_role("button", name="Descargar CSV", exact=True)).to_be_visible()
         page.goto(origin + "/mapa", wait_until="networkidle")
@@ -118,4 +160,4 @@ with sync_playwright() as playwright:
     public.close()
     team.close()
     browser.close()
-    print("Usuario y equipo: mismos totales reales, mapa y leyenda; selección, foco y hover conservan el relleno, incluso con cero publicaciones.")
+    print("Usuario y equipo: mismos totales reales, mapa y leyenda; hover, foco y selección rellenan el municipio y restauran su densidad al salir. Mercados continúa pendiente sin formularios en admin.")

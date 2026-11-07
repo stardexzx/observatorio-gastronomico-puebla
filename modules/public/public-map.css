@@ -20,4 +20,4 @@
 .public-map .municipal-density-legend ul{display:flex;flex-wrap:wrap;gap:7px 14px;padding:0;margin:0;list-style:none;}
 .public-map .municipal-density-legend li{display:flex;align-items:center;gap:5px;}
 .public-map .municipal-selection{display:flex;align-items:flex-start;gap:8px;width:100%;margin:0;padding-top:12px;border-top:1px solid #e5eaf0;color:#52647d;}
-.public-map .municipal-selection>i{flex:0 0 17px;height:12px;margin-top:3px;border:3px solid #033AA5;background:transparent;}
+.public-map .municipal-selection>i{flex:0 0 17px;height:12px;margin-top:3px;border:3px solid #033AA5;background:#c45a32;}

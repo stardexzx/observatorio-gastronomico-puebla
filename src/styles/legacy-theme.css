@@ -571,7 +571,7 @@ table.simple td{padding:10px 10px;border-bottom:1px solid var(--border);}
 .municipal-density-legend ul{display:flex;flex-wrap:wrap;gap:7px 14px;padding:0;margin:0;list-style:none;}
 .municipal-density-legend li{display:flex;align-items:center;gap:5px;}
 .municipal-selection{display:flex;align-items:flex-start;gap:8px;width:100%;margin:0;padding-top:12px;border-top:1px solid var(--border);}
-.municipal-selection>i{flex:0 0 17px;height:12px;margin-top:3px;border:3px solid #033AA5;background:transparent;}
+.municipal-selection>i{flex:0 0 17px;height:12px;margin-top:3px;border:3px solid #033AA5;background:#c45a32;}
 
 .municipal-map.compact .municipal-canvas svg{height:300px;}
 .person-identity{display:flex;align-items:center;gap:14px;margin-bottom:20px;}

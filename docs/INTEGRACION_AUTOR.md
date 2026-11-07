@@ -5,7 +5,7 @@ La base de la integración es el ZIP `observador-gastronomico-main.zip` aportado
 ## Correspondencias
 
 - El panel de resumen, recetas, ingredientes, cocineras, podcast, recetarios PDF y cuentas proceden de la entrega nueva.
-- La red de conocimiento, el mapa, la memoria histórica y el contenido institucional se adaptan desde los módulos anteriores. La vista pública de mercados queda en espera; Protección legal mantiene solo el apartado reservado. Acervo vuelve a sus cinco opciones originales. Los módulos históricos de captura se conservan detrás de sesión.
+- La red de conocimiento, el mapa, la memoria histórica y el contenido institucional se adaptan desde los módulos anteriores. Mercados queda en espera tanto en usuario como en admin, sin listas ni captura; Protección legal mantiene solo el apartado reservado. Acervo vuelve a sus cinco opciones originales. El código de captura anterior se conserva como referencia; las rutas de Mercados no habilitan esos formularios.
 - La línea de tiempo conserva épocas, hitos, búsqueda, enlaces e historial, adaptados al router Next.js.
 - La capa de datos de compatibilidad resuelve recetas, cocineras e ingredientes contra los catálogos del autor. Los datos propios de mercados y las fichas históricas conservan sus almacenes anteriores.
 - Las URLs antiguas de captura de recetas/cocineras ya no montan sus editores de la versión Vite. Se utilizan los formularios de la entrega nueva. La captura de mercados mantiene su módulo específico.
