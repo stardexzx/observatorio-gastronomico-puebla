@@ -56,3 +56,24 @@ test('summary map density remains stable on municipality selection and retains p
   assert.equal(buildPublicDashboardView(catalog,{...filters,municipality:'21019'}).distributionTotal,1);
   assert.deepEqual(summaryMapMunicipalityCounts(catalog,{period:'2026',category:'ingredientes',municipality:'21019'}),{'21114':1});
 });
+
+
+test('published markets contribute to summaries, date filters and territory without inventing missing records',()=>{
+  const withMarkets={...catalog,markets:[
+    {id:'m1',name:'Mercado publicado',municipalityCode:'21208',publishedAt:'2027-02-01T10:00:00Z'},
+    {id:'m2',name:'Otro mercado publicado',municipalityCode:'',publishedAt:'2027-03-01T10:00:00Z'},
+  ]};
+  const view=buildPublicDashboardView(withMarkets,filters);
+  assert.equal(view.distributionTotal,6);
+  assert.equal(view.metricValues.mercados,'2');
+  assert.equal(view.records.at(-1).records,6);
+  assert.equal(view.growth.reduce((sum,row)=>sum+row.mercados,0),2);
+  assert.deepEqual(view.municipalityCounts,{'21114':3,'21019':1,'21208':1});
+  assert.equal(view.rankings.mercados.length,2);
+  assert.deepEqual(publicSummaryYears(withMarkets),['2027','2026','2025']);
+  const marketOnly=buildPublicDashboardView(withMarkets,{...filters,category:'mercados'});
+  assert.equal(marketOnly.distributionTotal,2);
+  assert.equal(marketOnly.coverage.at(-1).value,1);
+  assert.deepEqual(summaryMapMunicipalityCounts(withMarkets,{...filters,category:'mercados',municipality:'21114'}),{'21208':1});
+  assert.equal(buildPublicDashboardView({...catalog,markets:[]},filters).distributionTotal,4);
+});

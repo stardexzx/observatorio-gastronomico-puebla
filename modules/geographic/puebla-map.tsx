@@ -60,7 +60,7 @@ export function PueblaMap({compact=false,large=false}:{compact?:boolean;large?:b
   const legend=mapDensityLegend(maximumCount);
   const activeCode=filters.municipality==="todos"?null:filters.municipality;
   return <div>
-    <div className={`relative overflow-hidden rounded-xl border border-slate-200 bg-[#E9EEE6]`}>
+    <div className={`relative overflow-hidden rounded-xl border border-slate-200 bg-[#edf3f5]`}>
       <svg viewBox={`0 0 ${map.width} ${map.height}`} className={`block ${mapHeight} w-full`} role="group" aria-label="Mapa municipal de Puebla con 217 áreas geoestadísticas municipales">
         {map.features.map(({feature,path})=>{const code=feature.properties.cvegeo;const selected=code===activeCode;const highlighted=selected||hovered===code;const count=municipalityCounts[code]||0;return <path key={code} d={path} fill={mapDensityColor(count,maximumCount)} stroke={highlighted?MAP_SELECTION_COLOR:"#ffffff"} strokeWidth={highlighted?2.5:.65} vectorEffect="non-scaling-stroke" fillRule="evenodd" tabIndex={0} role="button" aria-pressed={selected} aria-label={`${feature.properties.nomgeo}, ${count} registros publicados${selected?", municipio seleccionado":""}`} className="cursor-pointer outline-none transition" onMouseEnter={()=>setHovered(code)} onMouseLeave={()=>setHovered(null)} onFocus={()=>setHovered(code)} onBlur={()=>setHovered(null)} onClick={()=>selectMunicipality(selected?"todos":code)} onKeyDown={(event)=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();selectMunicipality(selected?"todos":code)}}}><title>{feature.properties.nomgeo} · {count} registros publicados{selected?" · Seleccionado":""}</title></path>})}
       </svg>

@@ -178,7 +178,7 @@ export default function MunicipalMap({
             y={view.y}
             width={view.w}
             height={view.h}
-            fill="#E9EEE6"
+            fill="#edf3f5"
           />
           {drawing.features.map((f) => {
             const p = f.properties,

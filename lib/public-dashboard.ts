@@ -7,7 +7,7 @@ export type PublicSummaryRecord = {
   source?: string; sourceReference?: string; completeness?: number;
 };
 export type PublicSummaryCatalog = {
-  recipes: PublicSummaryRecord[]; cooks: PublicSummaryRecord[]; ingredients: PublicSummaryRecord[];
+  recipes: PublicSummaryRecord[]; cooks: PublicSummaryRecord[]; ingredients: PublicSummaryRecord[]; markets?: PublicSummaryRecord[];
 };
 export const defaultSummaryFilters: DashboardFilters = { period: "todos", municipality: "todos", category: "todas" };
 /** Discard obsolete demo periods and malformed preferences rather than hiding real records. */
@@ -28,13 +28,14 @@ const publicationMonth = (record: PublicSummaryRecord) => {
   return typeof date === "string" && /^\d{4}-\d{2}-\d{2}T/.test(date) && Number.isFinite(Date.parse(date)) ? date.slice(0, 7) : null;
 };
 export function publicSummaryYears(catalog: PublicSummaryCatalog) {
-  return [...new Set([...catalog.recipes, ...catalog.cooks, ...catalog.ingredients].map(publicationMonth).filter((month): month is string => !!month).map(month => month.slice(0, 4)))].sort().reverse();
+  return [...new Set([...catalog.recipes, ...catalog.cooks, ...catalog.ingredients, ...(catalog.markets ?? [])].map(publicationMonth).filter((month): month is string => !!month).map(month => month.slice(0, 4)))].sort().reverse();
 }
 export function buildPublicDashboardView(catalog: PublicSummaryCatalog, filters: DashboardFilters, search = ""): ReturnType<typeof buildDashboardView> & { municipalityCounts: Record<string, number>; allDistribution: ReturnType<typeof buildDashboardView>["distribution"]; undated: number } {
   const rows = [
     ...catalog.recipes.map(record => ({ ...record, kind: "recetas" as const })),
     ...catalog.ingredients.map(record => ({ ...record, kind: "ingredientes" as const })),
     ...catalog.cooks.map(record => ({ ...record, kind: "cocineras" as const })),
+    ...(catalog.markets ?? []).map(record => ({ ...record, kind: "mercados" as const })),
   ];
   const byContext = rows.filter(record => (filters.municipality === "todos" || record.municipalityCode === filters.municipality) && (filters.period === "todos" || publicationMonth(record)?.startsWith(`${filters.period}-`)));
   const selected = byContext.filter(record => filters.category === "todas" || record.kind === filters.category);
@@ -49,14 +50,14 @@ export function buildPublicDashboardView(catalog: PublicSummaryCatalog, filters:
   const buckets = [...months, ...(undated ? ["Sin fecha"] : [])];
   if (!buckets.length) buckets.push("Sin publicaciones");
   const inBucket = (bucket: string) => selected.filter(record => bucket === "Sin fecha" ? !publicationMonth(record) : publicationMonth(record) === bucket);
-  const growth = buckets.map(month => ({ month, recetas: inBucket(month).filter(record => record.kind === "recetas").length, ingredientes: inBucket(month).filter(record => record.kind === "ingredientes").length, mercados: 0, cocineras: inBucket(month).filter(record => record.kind === "cocineras").length, legal: 0 }));
+  const growth = buckets.map(month => ({ month, recetas: inBucket(month).filter(record => record.kind === "recetas").length, ingredientes: inBucket(month).filter(record => record.kind === "ingredientes").length, mercados: inBucket(month).filter(record => record.kind === "mercados").length, cocineras: inBucket(month).filter(record => record.kind === "cocineras").length, legal: 0 }));
   let cumulative = 0;
-  const records = growth.map(point => ({ month: point.month, records: cumulative += point.recetas + point.ingredientes + point.cocineras }));
+  const records = growth.map(point => ({ month: point.month, records: cumulative += point.recetas + point.ingredientes + point.mercados + point.cocineras }));
   const covered = new Set<string>();
   const coverage = buckets.map(month => { for (const row of inBucket(month)) if (row.municipalityCode && municipalityCounts[row.municipalityCode]) covered.add(row.municipalityCode); return { month, value: covered.size }; });
   const verified = selected.length ? 100 : 0;
   const verification = buckets.map(month => ({ month, value: inBucket(month).length ? 100 : 0 }));
-  const rank = (kind: "recetas" | "ingredientes" | "cocineras") => {
+  const rank = (kind: "recetas" | "ingredientes" | "cocineras" | "mercados") => {
     const names = new Map<string, number>();
     for (const record of selected.filter(item => item.kind === kind)) { const name = record.name || record.title || "Sin título"; names.set(name, (names.get(name) ?? 0) + 1); }
     return [...names].map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value || a.name.localeCompare(b.name, "es"));
@@ -74,9 +75,9 @@ export function buildPublicDashboardView(catalog: PublicSummaryCatalog, filters:
   const searchResults = normalized ? selected.filter(row => normalize(`${row.name ?? row.title} ${row.municipality}`).includes(normalized)).slice(0, 6).map(row => ({ label: row.name || row.title || "Sin título", detail: categoryLabels[row.kind], section: "distribucion" })) : [];
   const total = selected.length;
   return {
-    metricValues: { total: total.toLocaleString("es-MX"), recetas: String(allDistribution[0].value), ingredientes: String(allDistribution[1].value), mercados: "0", cocineras: String(allDistribution[3].value), wealth: String(municipalCategories.filter(value => value === greatestDiversity && value > 0).length), verified: `${verified}%` },
+    metricValues: { total: total.toLocaleString("es-MX"), recetas: String(allDistribution[0].value), ingredientes: String(allDistribution[1].value), mercados: String(allDistribution[2].value), cocineras: String(allDistribution[3].value), wealth: String(municipalCategories.filter(value => value === greatestDiversity && value > 0).length), verified: `${verified}%` },
     records, verification, coverage, growth, distribution, allDistribution, distributionTotal: total, municipalityCounts, undated,
-    rankings: { recetas: rank("recetas"), ingredientes: rank("ingredientes"), mercados: [], municipios: Object.entries(municipalityCounts).map(([code, value]) => ({ name: pueblaMunicipalities.find(item => item.code === code)?.name || code, value })).sort((a,b) => b.value - a.value || a.name.localeCompare(b.name, "es")) },
+    rankings: { recetas: rank("recetas"), ingredientes: rank("ingredientes"), mercados: rank("mercados"), municipios: Object.entries(municipalityCounts).map(([code, value]) => ({ name: pueblaMunicipalities.find(item => item.code === code)?.name || code, value })).sort((a,b) => b.value - a.value || a.name.localeCompare(b.name, "es")) },
     quality, reports: total ? [{ title: "Panorama del acervo publicado", date: `${total} registros disponibles` }, { title: "Cobertura municipal", date: `${Object.keys(municipalityCounts).length} municipios con publicaciones` }] : [], verified, categoryOnly: filters.category === "todas" ? null : filters.category as Exclude<CategoryFilter,"todas">, searchResults,
   };
 }

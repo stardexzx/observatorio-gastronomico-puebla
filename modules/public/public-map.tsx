@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ArrowUpRight, BookOpen, ChefHat, Layers3, MapPin, RotateCcw, Search, Wheat, X } from "lucide-react";
+import { ArrowUpRight, BookOpen, ChefHat, Layers3, MapPin, RotateCcw, Search, ShoppingBasket, Wheat, X } from "lucide-react";
 import { usePublicCatalog } from "@/components/public/public-catalog-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,15 +14,16 @@ import "./public-map.css";
 type GeoFeature = { geometry: { type: string; coordinates: unknown[] }; properties: { cvegeo?: string; nomgeo?: string; code?: string; name?: string } };
 type GeoCollection = { features: GeoFeature[] };
 const layers = [
-  { key: "recetas", label: "Recetas", icon: BookOpen, color: "#C1531E" },
-  { key: "ingredientes", label: "Ingredientes", icon: Wheat, color: "#4F7A4A" },
+  { key: "recetas", label: "Recetas", icon: BookOpen, color: "#033AA5" },
+  { key: "ingredientes", label: "Ingredientes", icon: Wheat, color: "#43869a" },
+  { key: "mercados", label: "Mercados", icon: ShoppingBasket, color: "#2789D1" },
   { key: "cocineras", label: "Cocineras y cocineros", icon: ChefHat, color: "#10284C" },
 ];
 const normalize = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es-MX");
 const municipalityFor = (record: { municipalityCode: string; municipality: string }) => pueblaMunicipalities.find(item => item.code === record.municipalityCode || normalize(item.name) === normalize(record.municipality))?.code || "";
 
 export function PublicMap() {
-  const { recipes, cooks, ingredients, loading, error, reload } = usePublicCatalog();
+  const { recipes, cooks, ingredients, markets, loading, error, reload } = usePublicCatalog();
   const params = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -40,7 +41,8 @@ export function PublicMap() {
     ...recipes.map(record => ({ id: record.id, name: record.name, description: record.description, municipality: record.municipality, code: municipalityFor(record), type: "recetas", href: `/recetas/${encodeURIComponent(record.id)}` })),
     ...ingredients.map(record => ({ id: record.id, name: record.name, description: record.description, municipality: record.municipality, code: municipalityFor(record), type: "ingredientes", href: `/ingredientes/${encodeURIComponent(record.id)}` })),
     ...cooks.map(record => ({ id: record.id, name: record.name, description: record.biography, municipality: record.municipality, code: municipalityFor(record), type: "cocineras", href: `/cocineras/${encodeURIComponent(record.id)}` })),
-  ], [recipes, ingredients, cooks]);
+    ...markets.map(record => ({ id: record.id, name: record.name, description: record.description || "", municipality: record.municipality, code: municipalityFor(record), type: "mercados", href: `/mercados/${encodeURIComponent(record.id)}` })),
+  ], [recipes, ingredients, cooks, markets]);
   const matching = useMemo(() => all.filter(record => activeLayers.includes(record.type) && normalize(`${record.name} ${record.description} ${record.municipality}`).includes(normalize(query))), [all, activeLayers, query]);
   const results = matching.filter(record => !municipality || record.code === municipality);
   const data = useMemo(() => geometry && { features: geometry.features.map(feature => { const code = String(feature.properties.cvegeo || feature.properties.code || ""); return { ...feature, id: code, properties: { code, name: feature.properties.nomgeo || feature.properties.name || "", total: matching.filter(record => record.code === code).length } }; }), points: [], mapped: matching.filter(record => record.code).length }, [geometry, matching]);
@@ -48,7 +50,7 @@ export function PublicMap() {
   return <div className="public-map">
     <header className="mb-7"><p className="section-kicker mb-2">Territorio y patrimonio</p><h1 className="text-[32px] font-semibold tracking-tight text-[#001B62]">Mapa gastronómico de Puebla</h1><p className="mt-2 text-sm text-[#8190a4]">Explora el acervo publicado y sus vínculos con los municipios de Puebla.</p></header>
     <form role="search" className="mb-5 flex flex-wrap items-center gap-3 rounded-xl border bg-white p-4" onSubmit={event => { event.preventDefault(); change("q", draft); }}>
-      <div className="relative min-w-0 flex-1 basis-64"><Search className="absolute left-3 top-3 size-4 text-[#8190a4]"/><Input type="search" aria-label="Buscar en el mapa" value={draft} onChange={event => setDraft(event.target.value)} placeholder="Buscar una receta, ingrediente o persona…" maxLength={200} className="h-10 rounded-lg bg-[#f8fafc] pl-10"/></div>
+      <div className="relative min-w-0 flex-1 basis-64"><Search className="absolute left-3 top-3 size-4 text-[#8190a4]"/><Input type="search" aria-label="Buscar en el mapa" value={draft} onChange={event => setDraft(event.target.value)} placeholder="Buscar receta, ingrediente, mercado o persona…" maxLength={200} className="h-10 rounded-lg bg-[#f8fafc] pl-10"/></div>
       <Button type="submit" className="h-10 rounded-lg bg-[#033AA5] text-white hover:bg-[#001B62]"><Search className="size-4"/>Buscar</Button>
       <Button type="button" variant="outline" className="h-10 rounded-lg text-[#52647d]" onClick={() => { setDraft(""); router.replace(pathname, { scroll: false }); }}><RotateCcw className="size-4"/>Limpiar filtros</Button>
     </form>
@@ -61,7 +63,7 @@ export function PublicMap() {
         <p className="mt-4 text-[11px] leading-relaxed text-[#8190a4]">Fuente cartográfica: INEGI, Marco Geoestadístico, diciembre de 2025. Las personas se muestran por su vínculo municipal.</p>
       </section>
       <aside className="min-w-0 rounded-xl border bg-white p-5"><h2 className="flex items-center gap-2 text-sm font-semibold text-[#001B62]"><MapPin className="size-4 text-[#1684a5]"/>{selected?.name || "Resultados del mapa"}</h2><p className="mt-2 text-xs text-[#8190a4]" aria-live="polite">{loading ? "Cargando registros…" : error ? "Información no disponible" : `${results.length} registros encontrados`}</p>{municipality && <Button variant="outline" size="sm" className="mt-3 text-xs" onClick={() => change("municipio", "")}><X className="size-3"/>Quitar municipio</Button>}
-        {!loading && !error && <div className="mt-4 space-y-2">{results.map(record => { const layer = layers.find(item => item.key === record.type)!; const Icon = layer.icon; return <Link key={`${record.type}-${record.id}`} href={record.href} className="group flex items-start gap-3 rounded-lg border border-transparent p-3 transition hover:border-[#a9d2ed] hover:bg-[#f3f9fc]"><span className="grid size-9 shrink-0 place-items-center rounded-lg bg-[#edf7fa] text-[#1684a5]"><Icon className="size-4"/></span><span className="min-w-0 flex-1"><strong className="block text-xs font-semibold leading-relaxed text-[#001B62]">{record.name}</strong><span className="mt-1 block text-[11px] leading-relaxed text-[#8190a4]">{layer.label} · {record.municipality || "Municipio sin documentar"}</span></span><ArrowUpRight className="mt-1 size-3.5 text-[#a1adbc] group-hover:text-[#1684a5]"/></Link>; })}{!results.length && <p className="rounded-lg bg-[#f6f8fb] p-5 text-center text-xs leading-relaxed text-[#8190a4]">{all.length ? "No hay registros publicados para estos filtros." : "Todavía no hay registros publicados en el mapa."}</p>}</div>}
+        {!loading && !error && <div className="mt-4 space-y-2">{results.map(record => { const layer = layers.find(item => item.key === record.type)!; const Icon = layer.icon; return <Link key={`${record.type}-${record.id}`} href={record.href} className="group flex items-start gap-3 rounded-lg border border-transparent p-3 transition hover:border-[#a9d2ed] hover:bg-[#f3f9fc]"><span className="grid size-9 shrink-0 place-items-center rounded-lg bg-[#edf7fa] text-[#1684a5]"><Icon className="size-4"/></span><span className="min-w-0 flex-1"><strong className="block text-xs font-semibold leading-relaxed text-[#001B62]">{record.name}</strong><span className="mt-1 block text-[11px] leading-relaxed text-[#8190a4]">{layer.label} · {record.municipality || "Municipio sin documentar"}</span></span><ArrowUpRight className="mt-1 size-3.5 text-[#a1adbc] group-hover:text-[#1684a5]"/></Link>; })}{!results.length && <p className="rounded-lg bg-[#f6f8fb] p-5 text-center text-xs leading-relaxed text-[#8190a4]">{activeLayers.length === 1 && activeLayers[0] === "mercados" && !markets.length ? "Todavía no hay mercados publicados." : all.length ? "No hay registros publicados para estos filtros." : "Todavía no hay registros publicados en el mapa."}</p>}</div>}
         {!loading && matching.some(record => !record.code) && <p className="mt-5 border-t pt-4 text-[11px] leading-relaxed text-[#8190a4]">{matching.filter(record => !record.code).length} registros aún no tienen un municipio documentado.</p>}
       </aside>
     </div>

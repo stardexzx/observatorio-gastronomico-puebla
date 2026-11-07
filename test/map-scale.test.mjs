@@ -20,6 +20,6 @@ test("every numeric legend interval describes the actual fill, including small c
       assert.equal(mapDensityColor(count, maximum), containing[0].color);
     }
   }
-  assert.deepEqual(mapDensityLegend(10).map(range => range.label), ["0 registros", "1–2 registros", "3–5 registros", "6–7 registros", "8–10 registros"]);
+  assert.deepEqual(mapDensityLegend(10).map(range => range.label), ["0 registros", "1–2 registros", "3–4 registros", "5–6 registros", "7–8 registros", "9–10 registros"]);
   assert.equal(mapDensityLegend(1)[1].label, "1 registro");
 });

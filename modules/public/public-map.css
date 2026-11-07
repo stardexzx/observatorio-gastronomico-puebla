@@ -1,4 +1,4 @@
-.public-map .municipal-canvas{position:relative;overflow:hidden;border:1px solid #e5eaf0;border-radius:12px;background:#E9EEE6;}
+.public-map .municipal-canvas{position:relative;overflow:hidden;border:1px solid #e5eaf0;border-radius:12px;background:#edf3f5;}
 .public-map .municipal-canvas svg{display:block;width:100%;height:440px;touch-action:none;cursor:grab;}
 .public-map .municipal-canvas path[role=button]{cursor:pointer;outline:none;}
 .public-map .municipal-canvas path[role=button]:hover,.public-map .municipal-canvas path[role=button]:focus{stroke:#033AA5;stroke-width:2px;}

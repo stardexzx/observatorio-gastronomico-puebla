@@ -8,12 +8,25 @@ import type { IngredientRecord } from "@/data/ingredients";
 import type { Episode } from "@/data/podcasts";
 import { timelineEras } from "@/src/data/timeline.js";
 
+export type PublicMarketRecord = {
+  id: string;
+  name: string;
+  municipality: string;
+  municipalityCode: string;
+  region: string;
+  description?: string;
+  publishedAt?: string;
+  updatedAt?: string;
+  source?: string;
+  sourceReference?: string;
+};
+
 export type PublicCatalog = {
   recipes: RecipeRecord[];
   cooks: CookRecord[];
   ingredients: IngredientRecord[];
   episodes: Episode[];
-  markets: Record<string, unknown>[];
+  markets: PublicMarketRecord[];
   timeline: typeof timelineEras;
   relations: { source: string; target: string; type: string }[];
 };

@@ -54,7 +54,7 @@ with sync_playwright() as playwright:
     team.add_cookies([{"name": session["name"], "value": session["value"], "url": origin, "httpOnly": True, "sameSite": "Lax"}])
     pages = [public.new_page(), team.new_page()]
     catalog = public.request.get(origin + "/api/public/catalog").json()
-    total = sum(len(catalog[key]) for key in ["recipes", "ingredients", "cooks"])
+    total = sum(len(catalog[key]) for key in ["recipes", "ingredients", "cooks", "markets"])
     snapshots = []
     legends = []
     summaries = []
@@ -81,9 +81,18 @@ with sync_playwright() as playwright:
         page.goto(origin + "/mapa", wait_until="networkidle")
         expect(page.locator(".municipal-canvas path[role='button']")).to_have_count(217)
         snapshots.append(density_snapshot(page))
+        allowed_blues = {"rgb(237, 243, 245)", "rgb(200, 223, 228)", "rgb(141, 188, 198)", "rgb(67, 134, 154)", "rgb(22, 79, 112)", "rgb(16, 47, 79)"}
+        assert {row["fill"] for row in snapshots[-1]} <= allowed_blues, "El mapa no usa la paleta azul original"
         legends.append(page.locator(".municipal-legend").inner_text())
         check_zero_selection(page)
         page.screenshot(path=str(output / f"mapa-{label}-seleccion.png"), full_page=True)
+        page.goto(origin + "/mapa?tipos=mercados", wait_until="networkidle")
+        market_filter = page.get_by_role("button", name="Mercados", exact=True)
+        expect(market_filter).to_be_enabled()
+        expect(market_filter).to_have_attribute("aria-pressed", "true")
+        expect(page.locator(".public-map aside")).to_contain_text(f"{len(catalog['markets'])} registros encontrados")
+        for market in catalog["markets"]:
+            expect(page.locator(".public-map aside")).to_contain_text(market["name"])
         page.set_viewport_size({"width": 390, "height": 844})
         assert page.evaluate("document.documentElement.scrollWidth <= innerWidth"), label
     assert summaries[0] == summaries[1], "Entrar a sesión cambió los indicadores del acervo publicado"
@@ -101,6 +110,11 @@ with sync_playwright() as playwright:
         expect(page.locator(".municipal-canvas path[data-record-count='0']")).to_have_count(217)
         assert len({row["fill"] for row in density_snapshot(page)}) == 1
         check_zero_selection(page)
+        page.goto(origin + "/mapa?tipos=mercados", wait_until="networkidle")
+        expect(page.get_by_role("button", name="Mercados", exact=True)).to_be_enabled()
+        expect(page.get_by_role("button", name="Mercados", exact=True)).to_have_attribute("aria-pressed", "true")
+        expect(page.locator(".public-map aside")).to_contain_text("Todavía no hay mercados publicados.")
+        expect(page.locator(".municipal-canvas path[data-record-count='0']")).to_have_count(217)
     public.close()
     team.close()
     browser.close()
