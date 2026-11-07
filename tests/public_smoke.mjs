@@ -94,7 +94,9 @@ try{
  const session={origin,name:cookieName,value:cookieValue,reviewCookie:{name:review.split('=')[0],value:review.split('=')[1]},captureCookie:{name:capture.split('=')[0],value:capture.split('=')[1]},recipeId,cookId,ingredientId,episodeId,draftRecipeId,privateRecipeId:draftRecipeId,privateIngredientId,privateNames:['RECETA BORRADOR PRIVADO','INGREDIENTE PRIVADO','INFORMANTE PRIVADO','NOTAS PRIVADAS']};
  await writeFile('work/public-browser-session.json',JSON.stringify(session),{mode:0o600});
  console.log(`API/SQL public checks passed. Browser test runtime: ${origin}`);
- for(const [file,args] of [['tests/public_browser.py',['work/public-browser-session.json']],['tests/timeline_browser.py',[origin]]]){
+ const browserChecks=[['tests/public_browser.py',['work/public-browser-session.json']],['tests/timeline_browser.py',[origin]],['tests/consistent_views_browser.py',['work/public-browser-session.json']]];
+ // Reuse the same isolated data/permission checks for a focused map regression run.
+ for(const [file,args] of process.argv.includes('--consistency-only')?browserChecks.slice(-1):browserChecks){
   const browser=await exec('python',[file,...args],{env,timeout:360000,maxBuffer:300000});console.log(browser.stdout.trim());
  }
  console.log('Public integration: approved snapshots, private drafts, roles, original DB, persistence and browser checks passed.');

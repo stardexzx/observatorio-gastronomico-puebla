@@ -8,21 +8,16 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { useDashboard } from "./dashboard-context";
 import { pueblaMunicipalities } from "@/data/puebla-municipalities";
 
-const periods = [
-  { value: "2023-2024", label: "Todo el periodo", dates: "01 ene 2023 – 31 may 2024", compact: "Ene 2023 – May 2024" },
-  { value: "2024", label: "2024", dates: "01 ene 2024 – 31 may 2024", compact: "Ene – May 2024" },
-  { value: "2023", label: "2023", dates: "01 ene 2023 – 31 dic 2023", compact: "Ene – Dic 2023" },
-] as const;
 const normalize = (text: string) => text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es-MX").trim();
 
 export function DashboardFilters({ onGenerate }: { onGenerate: () => void }) {
-  const { filters, setFilter, resetFilters, publicMode, years } = useDashboard();
-  const availablePeriods: {value:string;label:string;dates:string;compact:string}[] = publicMode ? [{value:"todos",label:"Todo el periodo",dates:"Todas las publicaciones",compact:"Todo el periodo"}, ...years.map(year=>({value:year,label:year,dates:`Publicaciones de ${year}`,compact:`Año ${year}`}))] : [...periods];
+  const { filters, setFilter, resetFilters, years } = useDashboard();
+  const availablePeriods: {value:string;label:string;dates:string;compact:string}[] = [{value:"todos",label:"Todo el periodo",dates:"Todas las publicaciones",compact:"Todo el periodo"}, ...years.map(year=>({value:year,label:year,dates:`Publicaciones de ${year}`,compact:`Año ${year}`}))];
   const [periodOpen, setPeriodOpen] = useState(false);
   const [municipalityOpen, setMunicipalityOpen] = useState(false);
   const [municipalitySearch, setMunicipalitySearch] = useState("");
   const activeCount = Number(filters.municipality !== "todos") + Number(filters.category !== "todas");
-  const hasFilters = activeCount > 0 || filters.period !== (publicMode ? "todos" : "2023-2024");
+  const hasFilters = activeCount > 0 || filters.period !== "todos";
   const periodLabel = availablePeriods.find(period => period.value === filters.period)?.compact ?? filters.period;
   const municipalityMatches = pueblaMunicipalities.filter(item => normalize(`${item.name} ${item.code}`).includes(normalize(municipalitySearch))).length;
   const municipalityLabel = pueblaMunicipalities.find(item => item.code === filters.municipality)?.name ?? "Todos los municipios";
@@ -53,6 +48,6 @@ export function DashboardFilters({ onGenerate }: { onGenerate: () => void }) {
       </div>
       <p className="mt-4 border-t pt-3 text-[10px] leading-relaxed text-[#8190a4]">Los resultados se actualizan al seleccionar un filtro.</p>
     </PopoverContent></Popover>
-    <button type="button" onClick={onGenerate} className="toolbar-control toolbar-report"><FileDown className="size-3.5"/>{publicMode ? "Descargar reporte" : "Generar reporte"}</button>
+    <button type="button" onClick={onGenerate} className="toolbar-control toolbar-report"><FileDown className="size-3.5"/>Descargar reporte</button>
   </div>;
 }

@@ -4,7 +4,7 @@ import { build } from 'esbuild';
 import { fileURLToPath } from 'node:url';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const { outputFiles } = await build({entryPoints:[`${root}lib/public-dashboard.ts`],absWorkingDir:root,bundle:true,format:'esm',platform:'node',write:false,alias:{'@':root}});
-const { buildPublicDashboardView, publicSummaryYears } = await import(`data:text/javascript;base64,${Buffer.from(outputFiles[0].contents).toString('base64')}`);
+const { buildPublicDashboardView, publicSummaryYears, normalizeSummaryFilters, summaryMapMunicipalityCounts } = await import(`data:text/javascript;base64,${Buffer.from(outputFiles[0].contents).toString('base64')}`);
 const filters = {period:'todos',municipality:'todos',category:'todas'};
 const catalog = {
   recipes:[{id:'r1',name:'Uno',municipalityCode:'21114',publishedAt:'2025-05-10T10:00:00Z',description:'Preparación',source:'Archivo',sourceReference:'Referencia'},{id:'r2',name:'Dos',municipalityCode:'21019',publishedAt:'2026-03-20T10:00:00Z'}],
@@ -41,4 +41,18 @@ test('public dashboard empty catalog produces genuine zero and no fictitious rep
   assert.deepEqual(empty.rankings.municipios,[]);
   assert.equal(empty.records.at(-1).records,0);
   assert.equal(empty.coverage.at(-1).value,0);
+});
+test('obsolete demo filter preferences cannot carry the sample period into the published summary',()=>{
+  assert.deepEqual(normalizeSummaryFilters({period:'2023-2024',municipality:'unknown',category:'unknown'}),filters);
+  const valid={period:'2026',municipality:'21114',category:'recetas'};
+  assert.deepEqual(normalizeSummaryFilters(valid),valid);
+  assert.equal(buildPublicDashboardView(catalog,normalizeSummaryFilters({period:'2023-2024'})).distributionTotal,4);
+});
+
+test('summary map density remains stable on municipality selection and retains period/category filters',()=>{
+  const original=summaryMapMunicipalityCounts(catalog,filters);
+  assert.deepEqual(original,{'21114':3,'21019':1});
+  assert.deepEqual(summaryMapMunicipalityCounts(catalog,{...filters,municipality:'21019'}),original);
+  assert.equal(buildPublicDashboardView(catalog,{...filters,municipality:'21019'}).distributionTotal,1);
+  assert.deepEqual(summaryMapMunicipalityCounts(catalog,{period:'2026',category:'ingredientes',municipality:'21019'}),{'21114':1});
 });

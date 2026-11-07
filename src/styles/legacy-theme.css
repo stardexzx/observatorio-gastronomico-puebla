@@ -559,13 +559,20 @@ table.simple td{padding:10px 10px;border-bottom:1px solid var(--border);}
 .municipal-canvas{position:relative;background:#E9EEE6;border:1px solid var(--border);border-radius:10px;overflow:hidden;}
 .municipal-canvas svg{display:block;width:100%;height:440px;touch-action:none;cursor:grab;}
 .municipal-canvas path[role=button]{cursor:pointer;outline:none;}
-.municipal-canvas path[role=button]:focus,.municipal-canvas path[role=button]:hover{fill:#C1531E;stroke:#10284C;stroke-width:2px;}
+.municipal-canvas path[role=button]:focus,.municipal-canvas path[role=button]:hover{stroke:#033AA5;stroke-width:2px;}
 .map-toolbar{position:absolute;right:10px;bottom:10px;display:flex;gap:4px;}
 .map-toolbar .g-btn{font-size:18px;width:35px;height:35px;justify-content:center;padding:0;}
 .municipality-tip{position:absolute;top:10px;left:10px;display:flex;flex-direction:column;gap:4px;padding:10px 12px;border-radius:8px;background:#10284C;color:#fff;font-size:11px;pointer-events:none;max-width:70%;}
 .municipal-legend{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:10px;color:var(--muted);margin:12px 0;}
 .municipal-legend>div{display:flex;gap:4px;align-items:center;}
 .municipal-legend i{height:9px;width:18px;display:block;border:1px solid #ddd;}
+.municipal-canvas path[role=button][aria-pressed=true]{stroke:#033AA5;stroke-width:3px;}
+.municipal-legend .municipal-density-legend{align-items:flex-start;flex-direction:column;gap:7px;}
+.municipal-density-legend ul{display:flex;flex-wrap:wrap;gap:7px 14px;padding:0;margin:0;list-style:none;}
+.municipal-density-legend li{display:flex;align-items:center;gap:5px;}
+.municipal-selection{display:flex;align-items:flex-start;gap:8px;width:100%;margin:0;padding-top:12px;border-top:1px solid var(--border);}
+.municipal-selection>i{flex:0 0 17px;height:12px;margin-top:3px;border:3px solid #033AA5;background:transparent;}
+
 .municipal-map.compact .municipal-canvas svg{height:300px;}
 .person-identity{display:flex;align-items:center;gap:14px;margin-bottom:20px;}
 .person-identity h3{margin:8px 0 4px;}

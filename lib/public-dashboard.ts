@@ -9,6 +9,16 @@ export type PublicSummaryRecord = {
 export type PublicSummaryCatalog = {
   recipes: PublicSummaryRecord[]; cooks: PublicSummaryRecord[]; ingredients: PublicSummaryRecord[];
 };
+export const defaultSummaryFilters: DashboardFilters = { period: "todos", municipality: "todos", category: "todas" };
+/** Discard obsolete demo periods and malformed preferences rather than hiding real records. */
+export function normalizeSummaryFilters(input: unknown): DashboardFilters {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return { ...defaultSummaryFilters };
+  const saved = input as Record<string, unknown>;
+  const period = typeof saved.period === "string" && /^(todos|\d{4})$/.test(saved.period) ? saved.period : "todos";
+  const municipality = typeof saved.municipality === "string" && (saved.municipality === "todos" || pueblaMunicipalities.some(item => item.code === saved.municipality)) ? saved.municipality : "todos";
+  const category = ["todas", "recetas", "ingredientes", "mercados", "cocineras", "legal"].includes(String(saved.category)) ? saved.category as CategoryFilter : "todas";
+  return { period, municipality, category };
+}
 const categories = ["recetas", "ingredientes", "mercados", "cocineras", "legal"] as const;
 const colors = ["#033AA5", "#2789D1", "#FFBF18", "#EF703C", "#D58B20"];
 const normalize = (text: string) => text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es-MX").trim();
@@ -69,4 +79,9 @@ export function buildPublicDashboardView(catalog: PublicSummaryCatalog, filters:
     rankings: { recetas: rank("recetas"), ingredientes: rank("ingredientes"), mercados: [], municipios: Object.entries(municipalityCounts).map(([code, value]) => ({ name: pueblaMunicipalities.find(item => item.code === code)?.name || code, value })).sort((a,b) => b.value - a.value || a.name.localeCompare(b.name, "es")) },
     quality, reports: total ? [{ title: "Panorama del acervo publicado", date: `${total} registros disponibles` }, { title: "Cobertura municipal", date: `${Object.keys(municipalityCounts).length} municipios con publicaciones` }] : [], verified, categoryOnly: filters.category === "todas" ? null : filters.category as Exclude<CategoryFilter,"todas">, searchResults,
   };
+}
+
+/** Municipality selection filters the panels, while map density retains the territory as context. */
+export function summaryMapMunicipalityCounts(catalog: PublicSummaryCatalog, filters: DashboardFilters) {
+  return buildPublicDashboardView(catalog, { ...filters, municipality: "todos" }).municipalityCounts;
 }

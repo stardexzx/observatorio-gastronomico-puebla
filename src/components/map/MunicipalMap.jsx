@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Plus, Minus, RotateCcw } from "lucide-react";
-const COLORS = ["#EFEADC", "#F6E2B4", "#F1BD66", "#D9772B", "#B23A1F"];
+import { MAP_SELECTION_COLOR, mapDensityColor, mapDensityLegend } from "./mapScale.js";
 const BASE = { x: 0, y: 0, w: 620, h: 440 };
 function pointsOf(feature) {
   return (
@@ -75,7 +75,7 @@ export default function MunicipalMap({
         west + (x - ox) / scale,
         north - (y - oy) / scale,
       ],
-      max: Math.max(1, ...features.map((f) => Number(f.properties.total || 0))),
+      max: Math.max(0, ...features.map((f) => Number(f.properties.total || 0))),
     };
   }, [data]);
   const focusedView = useMemo(() => {
@@ -183,26 +183,27 @@ export default function MunicipalMap({
           {drawing.features.map((f) => {
             const p = f.properties,
               count = Number(p.total || 0),
-              level = count
-                ? Math.max(1, Math.ceil((count / drawing.max) * 4))
-                : 0;
+              isSelected = selected === p.code,
+              highlighted = isSelected || hover?.code === p.code;
             return (
               <path
                 key={p.code}
                 d={f.path}
                 fill={
                   selectionOnly && selected === p.code
-                    ? "#D89A2E"
-                    : COLORS[level]
+                    ? "#A9D2ED"
+                    : mapDensityColor(count, drawing.max)
                 }
-                stroke={selected === p.code ? "#10284C" : "#fff"}
-                strokeWidth={selected === p.code ? 2 : 0.65}
+                stroke={highlighted ? MAP_SELECTION_COLOR : "#fff"}
+                strokeWidth={isSelected ? 3 : highlighted ? 2 : 0.65}
                 vectorEffect="non-scaling-stroke"
                 fillRule="evenodd"
                 tabIndex={0}
                 role="button"
+                data-municipality={p.code}
+                data-record-count={count}
                 aria-label={
-                  selectionOnly ? p.name : `${p.name}: ${count} registros`
+                  selectionOnly ? p.name : `${p.name}: ${count} registros${isSelected ? ", municipio seleccionado" : ""}`
                 }
                 aria-pressed={selected === p.code}
                 onMouseEnter={() => setHover(p)}
@@ -230,7 +231,7 @@ export default function MunicipalMap({
                 <title>
                   {selectionOnly
                     ? p.name
-                    : `${p.name} · ${count} registros publicados`}
+                    : `${p.name} · ${count} registros publicados${isSelected ? " · Municipio seleccionado" : ""}`}
                 </title>
               </path>
             );
@@ -312,17 +313,15 @@ export default function MunicipalMap({
         <p className="foot-note">{selectionHint}</p>
       ) : (
         <div className="municipal-legend">
-          <span>
+          <span className="municipal-count">
             {drawing.features.length} municipios · {data.mapped} registros con
             vínculo municipal
           </span>
-          <div>
-            <span>Sin registros</span>
-            {COLORS.map((c) => (
-              <i style={{ background: c }} key={c} />
-            ))}
-            <span>Mayor cantidad</span>
+          <div className="municipal-density-legend" aria-label="Registros publicados por municipio">
+            <strong>Registros publicados por municipio</strong>
+            <ul>{mapDensityLegend(drawing.max).map(range => <li key={range.min}><i style={{ background: range.color }} aria-hidden="true"/><span>{range.label}</span></li>)}</ul>
           </div>
+          {selected && <p className="municipal-selection" role="status"><i aria-hidden="true"/><span>Municipio seleccionado: <strong>{drawing.features.find(feature => feature.properties.code === selected)?.properties.name || selected}</strong>. El contorno azul indica la selección; el relleno conserva la cantidad de registros.</span></p>}
         </div>
       )}
     </div>

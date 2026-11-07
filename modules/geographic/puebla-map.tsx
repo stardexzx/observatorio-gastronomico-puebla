@@ -5,6 +5,7 @@ import { AlertTriangle, MapPinned, RotateCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDashboard } from "@/components/dashboard/dashboard-context";
+import { mapDensityColor, mapDensityLegend, MAP_SELECTION_COLOR } from "@/src/components/map/mapScale.js";
 import { municipalityLabels } from "@/lib/dashboard-view";
 
 type Position = [number, number];
@@ -15,7 +16,6 @@ type GeoFeature = {
 };
 type GeoCollection = { metadata?:Record<string,string|number>; features:GeoFeature[] };
 
-const colors=["#edf3f5","#c8dfe4","#8dbcc6","#43869a","#164f70","#102f4f"];
 
 function allPositions(feature:GeoFeature){
   const polygons=feature.geometry.type==="Polygon"?[feature.geometry.coordinates]:feature.geometry.coordinates;
@@ -24,7 +24,7 @@ function allPositions(feature:GeoFeature){
 
 export function PueblaMap({compact=false,large=false}:{compact?:boolean;large?:boolean}){
   const mapHeight=large?"h-[300px] sm:h-[360px]":compact?"h-[180px]":"h-[300px]";
-  const {filters,selectMunicipality,view,publicMode,municipalityCounts}=useDashboard();
+  const {filters,selectMunicipality,municipalityCounts}=useDashboard();
   const [geojson,setGeojson]=useState<GeoCollection|null>(null);
   const [error,setError]=useState(false);
   const [attempt,setAttempt]=useState(0);
@@ -48,26 +48,27 @@ export function PueblaMap({compact=false,large=false}:{compact?:boolean;large?:b
       const polygons=feature.geometry.type==="Polygon"?[feature.geometry.coordinates]:feature.geometry.coordinates;
       return polygons.map((polygon)=>polygon.map((ring)=>ring.map((point,index)=>{const [x,y]=project(point);return `${index?"L":"M"}${x.toFixed(1)},${y.toFixed(1)}`}).join("")+"Z").join(" ")).join(" ");
     };
-    const features=geojson.features.map((feature)=>({feature,path:toPath(feature),score:(Number(feature.properties.cve_mun)*37)%101})).sort((a,b)=>b.score-a.score);
+    const features=geojson.features.map((feature)=>({feature,path:toPath(feature)}));
     return {features,width,height};
   },[geojson,large]);
 
   if(error)return <div className={`flex ${mapHeight} flex-col items-center justify-center rounded-xl border border-red-200 bg-red-50/50 text-center`}><AlertTriangle className="size-8 text-red-500"/><p className="mt-3 text-sm font-bold text-slate-700">No pudimos cargar la capa municipal</p><p className="mt-1 text-xs text-slate-500">El archivo local del mapa no está disponible.</p><Button variant="outline" size="sm" onClick={()=>{setError(false);setGeojson(null);setAttempt(value=>value+1)}} className="mt-4"><RotateCw className="size-4"/>Reintentar</Button></div>;
   if(!map)return <div className={`relative ${mapHeight} overflow-hidden rounded-xl border border-slate-200 bg-[#edf3f5]`}><Skeleton className="absolute inset-6 rounded-[40%]"/><div className="absolute inset-0 grid place-items-center text-xs font-semibold text-slate-500">Cargando 217 municipios…</div></div>;
 
-  const coverageTarget=publicMode ? Object.keys(municipalityCounts).length : filters.municipality==="todos"?(view.coverage.at(-1)?.value??90):1;
-  const maxPublicCount=Math.max(...Object.values(municipalityCounts),1);
-  const coveredCodes=new Set(map.features.slice(0,coverageTarget).map(({feature})=>feature.properties.cvegeo));
+  const coverageTarget=Object.keys(municipalityCounts).length;
+  const maximumCount=Math.max(...Object.values(municipalityCounts),0);
+  const legend=mapDensityLegend(maximumCount);
   const activeCode=filters.municipality==="todos"?null:filters.municipality;
   return <div>
-    <div className={`relative overflow-hidden rounded-xl ${large?"bg-[#f8fafc]":"border border-slate-200 bg-[#edf3f5]"}`}>
-      <svg viewBox={`0 0 ${map.width} ${map.height}`} className={`block ${mapHeight} w-full`} role="img" aria-label="Mapa municipal de Puebla con 217 áreas geoestadísticas municipales">
-        {map.features.map(({feature,path,score})=>{const code=feature.properties.cvegeo;const covered=publicMode ? !!municipalityCounts[code] : activeCode?code===activeCode:coveredCodes.has(code);const selected=code===activeCode;const level=covered?(publicMode?Math.min(5,1+Math.floor((municipalityCounts[code]/maxPublicCount)*4)):Math.min(5,1+Math.floor(score/21))):0;return <path key={code} d={path} fill={colors[level]} stroke={selected?"#f3be4d":"#ffffff"} strokeWidth={selected?2.5:.65} vectorEffect="non-scaling-stroke" fillRule="evenodd" tabIndex={0} role="button" aria-label={`${feature.properties.nomgeo}, ${publicMode ? `${municipalityCounts[code] || 0} registros publicados` : covered?"con registros":"sin registros simulados"}`} className="cursor-pointer outline-none transition hover:fill-[#c45a32] focus:fill-[#c45a32]" onMouseEnter={()=>setHovered(code)} onMouseLeave={()=>setHovered(null)} onFocus={()=>setHovered(code)} onBlur={()=>setHovered(null)} onClick={()=>selectMunicipality(code)} onKeyDown={(event)=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();selectMunicipality(code)}}}><title>{feature.properties.nomgeo} · {publicMode ? `${municipalityCounts[code] || 0} registros publicados` : covered?`${Math.max(1,Math.round(score*1.6))} registros simulados`:"sin registros simulados"}</title></path>})}
+    <div className={`relative overflow-hidden rounded-xl border border-slate-200 bg-[#E9EEE6]`}>
+      <svg viewBox={`0 0 ${map.width} ${map.height}`} className={`block ${mapHeight} w-full`} role="group" aria-label="Mapa municipal de Puebla con 217 áreas geoestadísticas municipales">
+        {map.features.map(({feature,path})=>{const code=feature.properties.cvegeo;const selected=code===activeCode;const highlighted=selected||hovered===code;const count=municipalityCounts[code]||0;return <path key={code} d={path} fill={mapDensityColor(count,maximumCount)} stroke={highlighted?MAP_SELECTION_COLOR:"#ffffff"} strokeWidth={highlighted?2.5:.65} vectorEffect="non-scaling-stroke" fillRule="evenodd" tabIndex={0} role="button" aria-pressed={selected} aria-label={`${feature.properties.nomgeo}, ${count} registros publicados${selected?", municipio seleccionado":""}`} className="cursor-pointer outline-none transition" onMouseEnter={()=>setHovered(code)} onMouseLeave={()=>setHovered(null)} onFocus={()=>setHovered(code)} onBlur={()=>setHovered(null)} onClick={()=>selectMunicipality(selected?"todos":code)} onKeyDown={(event)=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();selectMunicipality(selected?"todos":code)}}}><title>{feature.properties.nomgeo} · {count} registros publicados{selected?" · Seleccionado":""}</title></path>})}
       </svg>
-      {hovered&&<div className="pointer-events-none absolute right-3 top-3 rounded-lg bg-[#102f4f] px-3 py-2 text-xs font-semibold text-white shadow-lg"><MapPinned className="mr-1.5 inline size-3.5 text-[#f3be4d]"/>{municipalityLabels[hovered]}</div>}
-      {!compact&&<div className="absolute bottom-3 left-3 rounded-lg bg-white/95 px-3 py-2 text-[10px] text-slate-500 shadow-sm"><div className="mb-1 font-semibold text-slate-700">Concentración de registros</div><div className="flex gap-1">{colors.slice(1).map(color=><span key={color} className="h-2 w-6 rounded-sm" style={{background:color}}/>)}</div><div className="mt-1 flex justify-between"><span>Baja</span><span>Alta</span></div></div>}
+      {hovered&&<div className="pointer-events-none absolute right-3 top-3 rounded-lg bg-[#102f4f] px-3 py-2 text-xs font-semibold text-white shadow-lg"><MapPinned className="mr-1.5 inline size-3.5 text-[#A9D2ED]"/>{municipalityLabels[hovered]} · {municipalityCounts[hovered]||0} registros</div>}
+      {!compact&&<div className="absolute bottom-3 left-3 rounded-lg bg-white/95 px-3 py-2 text-[10px] text-slate-500 shadow-sm"><div className="mb-1 font-semibold text-slate-700">Registros publicados por municipio</div><div className="flex flex-wrap gap-2">{legend.map(range=><span key={range.min} className="inline-flex items-center gap-1"><i className="h-2 w-4 rounded-sm border border-slate-200" style={{background:range.color}}/>{range.label}</span>)}</div></div>}
     </div>
     <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[10px] text-slate-500"><span><strong className="text-slate-700">217</strong> municipios · <strong className="text-slate-700">{coverageTarget}</strong> con registros</span>{!compact&&<span>Fuente: INEGI, Marco Geoestadístico dic. 2025</span>}</div>
-    {activeCode&&<button onClick={()=>selectMunicipality("todos")} className="mt-2 text-xs font-semibold text-[#174f78] hover:underline">Quitar filtro de {municipalityLabels[activeCode]}</button>}
+    <p className="mt-2 text-[10px] leading-relaxed text-slate-500">Los colores muestran la densidad del territorio para el periodo y la categoría elegidos. El contorno azul identifica el municipio filtrado.</p>
+    {activeCode&&<div className="mt-3 flex flex-wrap items-center gap-3 text-xs"><span className="inline-flex items-center gap-2 text-[#033AA5]"><i className="h-3 w-4 rounded-sm border-2 border-[#033AA5]"/>Municipio seleccionado: {municipalityLabels[activeCode]}</span><button onClick={()=>selectMunicipality("todos")} className="font-semibold text-[#174f78] hover:underline">Quitar filtro</button></div>}
   </div>;
 }

@@ -14,7 +14,7 @@ La base de la integración es el ZIP `observador-gastronomico-main.zip` aportado
 
 El SQL de dominio `ogp` de ambas entregas es funcionalmente el mismo; las diferencias encontradas son comentarios. Para un esquema existente se aplican únicamente las migraciones incrementales del panel. `app_auth` y `demo.recipe_forms` se agregan sin borrar los registros de dominio ni las tablas de la integración previa.
 
-La preparación de la aplicación no ejecuta `scripts/setup-demo.mjs`: ese script original incorpora ejemplos y no forma parte del arranque unificado. Las cuentas se activan a petición del operador mediante el script de activación del autor. Los ejemplos visuales ya incluidos en sus catálogos se conservan como demostración.
+La preparación de la aplicación no ejecuta `scripts/setup-demo.mjs`: ese script original incorpora ejemplos y no forma parte del arranque unificado. Las cuentas se activan a petición del operador mediante el script de activación del autor. Los ejemplos de código se conservan como referencia y no se cargan automáticamente en los catálogos.
 
 Las configuraciones de PostgreSQL anteriores siguen separadas del nuevo archivo `.env.local`. El volumen de Docker de la aplicación unificada tiene nombre propio y no sustituye el volumen `ogp_data` de la versión previa. Una instalación existente con datos solo debe conectarse después de comprobar el nombre esperado de base y los permisos del propietario.
 
@@ -41,4 +41,4 @@ El ZIP recibido no contiene archivos PDF, aunque su catálogo referencia `cocina
 
 El endpoint de consulta `/api/public/catalog` devuelve proyecciones explícitas de campos públicos. Las fuentes originales se consultan mediante `ogp.v_fichas_publicas`; las nuevas capturas del panel usan snapshots aprobados en `demo.public_catalog_versions`. Se omiten contactos, informantes, documentos privados y relaciones a borradores. Las imágenes originalmente aprobadas de la BD conservan su visibilidad; las capturas del panel publican por ahora su información textual y mantienen adjuntos privados.
 
-El resumen y los reportes públicos calculan cifras a partir de esas publicaciones. El resumen administrativo original conserva sus datos ilustrativos. Los antiguos archivos localStorage/IndexedDB no se convierten automáticamente en publicaciones y permanecen disponibles para respaldo e importación explícita desde el menú del equipo.
+El resumen, los reportes y el mapa calculan sus cifras a partir de esas publicaciones en ambas sesiones. Los registros privados se consultan en Acervo y no incrementan los totales públicos. Los datos ilustrativos de la entrega se conservan como referencia de código, pero ya no se usan en esas pantallas. Los antiguos archivos localStorage/IndexedDB no se convierten automáticamente en publicaciones y permanecen disponibles para respaldo e importación explícita desde el menú del equipo.

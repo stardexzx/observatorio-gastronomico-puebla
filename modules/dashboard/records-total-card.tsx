@@ -20,9 +20,9 @@ function AnimatedCount({value}:{value:number}){
  return <><span aria-hidden="true">{format(display)}</span><span className="sr-only">{format(value)}</span></>;
 }
 export function RecordsTotalCard(){
- const {view,filters,setFilter,publicMode}=useDashboard();const [open,setOpen]=useState(false);const [hovered,setHovered]=useState<number|null>(null);
+ const {view,filters,setFilter}=useDashboard();const [open,setOpen]=useState(false);const [hovered,setHovered]=useState<number|null>(null);
  const total=view.distributionTotal;
- const period=publicMode?(filters.period==='todos'?'Todo el periodo':`Año ${filters.period}`):filters.period==='2024'?'Ene – May 2024':filters.period==='2023'?'Ene – Dic 2023':'Ene 2023 – May 2024';
+ const period=filters.period==='todos'?'Todo el periodo':`Año ${filters.period}`;
  const points=view.records;const min=Math.min(...points.map(point=>point.records));const max=Math.max(...points.map(point=>point.records));
  const coordinates=points.map((point,index)=>({x:4+(index*88/Math.max(1,points.length-1)),y:33-((point.records-min)/Math.max(1,max-min))*26}));
  const path=coordinates.map((point,index)=>`${index?'L':'M'}${point.x},${point.y}`).join(' ');
