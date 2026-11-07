@@ -16,14 +16,18 @@ npm run db:up
 
 Con la base preparada, ejecuta `npm run dev` y abre <http://localhost:5173> para consultar la página pública sin cuenta.
 
-Solo para administrar el contenido, crea el enlace inicial de activación para tu correo real:
+Para probar como administrador sin tener cuenta, genera el enlace inicial con tu correo real:
 
 ```sh
-node --env-file=.env.local scripts/setup-login.mjs tu-correo@ejemplo.com
+npm run auth:setup -- tu-correo@ejemplo.com
 npm run dev
 ```
 
-Abre el enlace de activación que imprime el comando y establece tu contraseña, de 12 a 128 caracteres. Caduca a las 24 horas y solo se usa para la primera cuenta de administrador. No hay contraseña predeterminada. Después usa «Acceso del equipo» en la página o abre <http://localhost:5173/iniciar-sesion>. Si la cuenta ya está activada, no vuelvas a ejecutar el comando de activación: usa el inicio de sesión habitual. Las siguientes cuentas se administran dentro del panel.
+Copia la dirección del campo `activationUrl` que imprime el primer comando. Cuando la aplicación esté encendida, abre ese enlace y establece tu contraseña, de 12 a 128 caracteres. El enlace caduca a las 24 horas y solo se usa para la primera cuenta de administrador. No hay contraseña predeterminada. Después usa «Acceso del equipo» en la página o abre <http://localhost:5173/iniciar-sesion> e introduce ese mismo correo y contraseña.
+
+Si ya ejecutaste `npm run dev` para consultar la página pública, deja esa terminal abierta y ejecuta únicamente `npm run auth:setup -- tu-correo@ejemplo.com` en una segunda terminal, desde la raíz del proyecto. No necesitas iniciar otro servidor.
+
+Si ya existen cuentas activadas, usa una cuenta administradora para añadir la de otra persona desde **Perfil → Roles y permisos → Gestionar personas → Añadir persona**, con rol **Administrador**. La activación inicial no sustituye cuentas ni contraseñas existentes. Cada computadora con su propia BD tiene sus propias cuentas; no se copian con GitHub.
 
 ## Si ya instalaste la entrega del creador de la BD
 

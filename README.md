@@ -30,6 +30,43 @@ Desarrollo y compilación usan el mismo servidor Next.js de Node. No requieren B
 
 Si ya ejecutaste la entrega del autor, puedes reutilizar su `.env.local` y su PostgreSQL: ejecuta `npm run db:migrate` y `npm run dev`, sin crear otra cuenta. La guía de Windows incluye este caso.
 
+## Probar como administrador desde cero
+
+Quien descargue el proyecto puede crear su primer administrador en su propia base local. No necesita una cuenta del autor ni una contraseña compartida. Se requieren Node.js 22.13 o superior, npm y Docker Desktop encendido con contenedores Linux.
+
+1. Descarga la rama `prueba` y prepara la instalación:
+
+   ```bash
+   git clone --branch prueba https://github.com/stardexzx/observatorio-gastronomico-puebla.git
+   cd observatorio-gastronomico-puebla
+   npm ci
+   npm run configurar
+   npm run db:up
+   ```
+
+   Si descargaste el ZIP de `prueba`, omite las dos primeras líneas y abre una terminal en la carpeta que contiene `package.json`.
+
+2. Genera el enlace de activación usando tu correo:
+
+   ```bash
+   npm run auth:setup -- tu_correo@dominio.com
+   ```
+
+   Sustituye el correo de ejemplo por el tuyo y copia la dirección que aparece en el campo `activationUrl`. Este comando genera el enlace; la cuenta se crea cuando lo abres y defines tu contraseña.
+
+3. Enciende la aplicación y deja esa terminal abierta:
+
+   ```bash
+   npm run dev
+   ```
+
+4. Abre el enlace de activación en el navegador y define una contraseña de **12 a 128 caracteres**. El enlace es de un solo uso, caduca a las **24 horas** y crea la primera cuenta con rol **Administrador**.
+5. Entra a **http://localhost:5173/iniciar-sesion** con el correo y la contraseña que acabas de elegir. El menú de perfil permite entrar a **Roles y permisos**.
+
+Las cuentas pertenecen a esa base de datos: no se descargan con GitHub ni se comparten automáticamente entre computadoras. No hay una cuenta ni contraseña de admin precargadas. El resumen puede mostrar cero registros hasta que el equipo publique fichas reales; guardar un borrador no lo hace público.
+
+Si `auth:setup` informa que **ya existen cuentas activadas**, esa base ya tiene cuentas. Descargar otra copia en una carpeta distinta de la misma computadora puede reutilizar el volumen de Docker y esas cuentas. Un administrador existente puede crear otra desde **Perfil → Roles y permisos → Gestionar personas → Añadir persona**, seleccionando el rol **Administrador**. No hace falta volver a instalar la base.
+
 ## Prioridad de las dos entregas
 
 | Área | Versión integrada |
