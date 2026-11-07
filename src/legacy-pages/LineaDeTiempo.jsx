@@ -121,7 +121,6 @@ function TimelineContent({ timelineEras, recipes }) {
         <article className="tl-event-detail" aria-labelledby="tl-event-title" key={event.id}>
           <div className="tl-event-visual"><TimelineArt era={era.id}/><span>{era.period}</span></div>
           <div className="tl-event-copy"><p className="tl-event-date"><CalendarDays size={15} aria-hidden="true"/>{event.date}</p><h3 id="tl-event-title" tabIndex={-1}>{event.title}</h3><p className="tl-event-summary">{event.summary}</p>
-            <div className="tl-tags">{event.tags.map(tag => <span key={tag}>{tag}</span>)}</div>
             <ul className="tl-event-notes">{event.details.map(text => <li key={text}>{text}</li>)}</ul>
             {!!sources.length && <div className="tl-event-sources"><h4>Para saber más</h4>{sources.map(source => <a key={source.url} href={source.url} target="_blank" rel="noopener noreferrer">{source.label} <span aria-hidden="true"><ExternalLink size={12} aria-hidden="true"/></span></a>)}</div>}
             {recipes.some(recipe => era.recipes.some(name => normalize(name) === normalize(recipe.name))) && <div className="tl-linked-recipes"><h4>Explora en el acervo</h4>{recipes.filter(recipe => era.recipes.some(name => normalize(name) === normalize(recipe.name))).map(recipe => <Link key={recipe.id} to={`/recetas/${encodeURIComponent(recipe.id)}`}><BookOpen size={14} aria-hidden="true"/>{recipe.name}<ExternalLink size={12} aria-hidden="true"/></Link>)}</div>}
