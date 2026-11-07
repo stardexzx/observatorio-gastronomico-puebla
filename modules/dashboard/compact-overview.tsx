@@ -20,25 +20,25 @@ const rankingTabs: { key: RankingKey; label: string }[] = [
 const tooltipStyle = { borderRadius: 12, border: "1px solid #e5eaf0", fontSize: 12, boxShadow: "0 6px 24px #1732570d" };
 
 export function CompactOverview() {
-  const { view, filters, setFilter } = useDashboard();
+  const { view, filters, setFilter, publicMode } = useDashboard();
   const [qualityOpen,setQualityOpen]=useState<string|null>(null);
   const [ranking, setRanking] = useState<RankingKey>("recetas");
   const coverage = view.coverage.at(-1)?.value ?? 0;
   const activeRanking = view.rankings[ranking];
   const rankingMax = Math.max(...activeRanking.map(item => item.value), 1);
-  const period = filters.period === "2024" ? "Ene — May 2024" : filters.period === "2023" ? "Año 2023" : "Ene 2023 — May 2024";
+  const period = publicMode ? (filters.period === "todos" ? "Todo el periodo" : `Año ${filters.period}`) : filters.period === "2024" ? "Ene — May 2024" : filters.period === "2023" ? "Año 2023" : "Ene 2023 — May 2024";
 
   return <div className="dashboard-overview mt-6 space-y-6 pb-10">
     <DashboardSelection/>
     <section aria-label="Indicadores generales" className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
       <RecordsTotalCard/>
       <Metric icon={MapPin} label="Municipios con registros" value={String(coverage)} suffix="/ 217" detail="Cobertura del territorio poblano" data={view.coverage} color={colors[1]}/>
-      <Metric icon={CircleCheck} label="Registros verificados" value={`${view.verified}%`} detail="+8.6 pp vs. periodo anterior" data={view.verification} color={colors[3]}/>
-      <Metric icon={Sparkles} label="Municipios con mayor riqueza" value={view.metricValues.wealth} detail="Diversidad del patrimonio" data={view.coverage.slice(-6).map((item,index) => ({ ...item, value: 14 + index * 2 }))} color={colors[2]}/>
+      <Metric icon={CircleCheck} label="Registros verificados" value={`${view.verified}%`} detail={publicMode ? "Publicaciones aprobadas para consulta" : "+8.6 pp vs. periodo anterior"} data={view.verification} color={colors[3]}/>
+      <Metric icon={Sparkles} label="Municipios con mayor riqueza" value={view.metricValues.wealth} detail="Diversidad del patrimonio" data={publicMode ? view.coverage : view.coverage.slice(-6).map((item,index) => ({ ...item, value: 14 + index * 2 }))} color={colors[2]}/>
     </section>
 
     <section id="tendencias" aria-label="Tendencias y composición" className="grid gap-6 lg:grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)]">
-      <DashboardCard className="growth-card" title="Crecimiento del acervo" subtitle={`Nuevos registros por categoría · ${period}`} action={<span className="dashboard-chip">Evolución</span>}>
+      <DashboardCard className="growth-card" title="Crecimiento del acervo" subtitle={`${publicMode ? "Publicaciones por categoría" : "Nuevos registros por categoría"} · ${period}`} action={<span className="dashboard-chip">Evolución</span>}>
         <GrowthExplorer/>
       </DashboardCard>
       <DashboardCard title="Composición del acervo" subtitle="Distribución de los registros">
@@ -57,9 +57,9 @@ export function CompactOverview() {
           </table>
         </div>
       </DashboardCard>
-      <DashboardCard className="ranking-card" title="Lo más documentado" subtitle="Los cinco primeros registros">
+      <DashboardCard className="ranking-card" title="Lo más documentado" subtitle={publicMode ? "Fichas publicadas por nombre" : "Los cinco primeros registros"}>
         <div className="mt-5 flex gap-1 rounded-lg bg-[#f5f7fa] p-1" role="group" aria-label="Categoría del ranking">{rankingTabs.map(tab => <button key={tab.key} aria-pressed={ranking===tab.key} onClick={() => setRanking(tab.key)} className={`min-w-0 flex-1 rounded-md px-1 py-2 text-[10px] font-medium transition ${ranking===tab.key?"bg-white text-[#1684a5] shadow-sm":"text-[#8190a4] hover:text-[#173257]"}`}>{tab.label}</button>)}</div>
-        <ol className="ranking-list mt-5">{activeRanking.slice(0,5).map((item,index) => <li key={item.name} className="grid grid-cols-[30px_minmax(0,1fr)_auto] items-center gap-3"><span className={`grid size-[30px] place-items-center rounded-lg text-[11px] font-semibold ${index===0?"bg-[#e8f5f9] text-[#1684a5]":"bg-[#f2f5f9] text-[#8a97a9]"}`}>{String(index+1).padStart(2,"0")}</span><div className="min-w-0"><p className="text-[12px] font-medium leading-snug">{item.name}</p><div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-[#f0f3f7]"><span className="block h-full rounded-full bg-[#62b9ce]" style={{width:`${(item.value/rankingMax)*100}%`}}/></div></div><strong className="min-w-6 text-right text-[14px] font-semibold tabular-nums">{item.value}</strong></li>)}</ol>
+        {publicMode && !activeRanking.length && <p className="mt-5 text-xs text-[#8190a4]">Todavía no hay publicaciones en esta categoría.</p>}<ol className="ranking-list mt-5">{activeRanking.slice(0,5).map((item,index) => <li key={item.name} className="grid grid-cols-[30px_minmax(0,1fr)_auto] items-center gap-3"><span className={`grid size-[30px] place-items-center rounded-lg text-[11px] font-semibold ${index===0?"bg-[#e8f5f9] text-[#1684a5]":"bg-[#f2f5f9] text-[#8a97a9]"}`}>{String(index+1).padStart(2,"0")}</span><div className="min-w-0"><p className="text-[12px] font-medium leading-snug">{item.name}</p><div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-[#f0f3f7]"><span className="block h-full rounded-full bg-[#62b9ce]" style={{width:`${(item.value/rankingMax)*100}%`}}/></div></div><strong className="min-w-6 text-right text-[14px] font-semibold tabular-nums">{item.value}</strong></li>)}</ol>
       </DashboardCard>
     </section>
 
@@ -72,12 +72,12 @@ export function CompactOverview() {
         })}</div>
         <p className="mt-5 border-t pt-3 text-[10px] text-[#a68a57]">{view.quality.filter(item=>item.value<80).length} indicadores por debajo de la meta</p>
       </DashboardCard>
-      <DashboardCard title="Reportes recientes" subtitle="Últimas publicaciones del observatorio" action={<Link href="/reportes" className="flex items-center gap-1 text-[10px] font-medium text-[#1684a5] hover:underline">Ver todos<ArrowRight className="size-3"/></Link>}>
-        <ol className="report-timeline mt-6">{view.reports.slice(0,3).map((report,index) => <li key={report.title} className="relative pb-6 pl-6 last:pb-0"><span className="absolute left-0 top-1 size-2.5 rounded-full" style={{background:colors[index],boxShadow:`0 0 0 4px ${colors[index]}18`,outlineColor:colors[index]}}/><p className="text-[12px] font-medium leading-relaxed">{report.title}</p><p className="mt-1 text-[10px] text-[#8a97a9]">{report.date}</p><Link href="/reportes" className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-[#f5f7fa] px-2 py-1.5 text-[10px] font-medium text-[#748399] transition hover:bg-[#eaf5f9] hover:text-[#1684a5]"><FileText className="size-3.5"/>Consultar reporte<ArrowRight className="size-3"/></Link></li>)}</ol>
+      <DashboardCard title={publicMode ? "Reportes disponibles" : "Reportes recientes"} subtitle={publicMode ? "Resultados del acervo publicado" : "Últimas publicaciones del observatorio"} action={<Link href="/reportes" className="flex items-center gap-1 text-[10px] font-medium text-[#1684a5] hover:underline">Ver todos<ArrowRight className="size-3"/></Link>}>
+        {publicMode && !view.reports.length && <p className="mt-5 text-xs text-[#8190a4]">Los reportes mostrarán resultados cuando haya registros publicados.</p>}<ol className="report-timeline mt-6">{view.reports.slice(0,3).map((report,index) => <li key={report.title} className="relative pb-6 pl-6 last:pb-0"><span className="absolute left-0 top-1 size-2.5 rounded-full" style={{background:colors[index],boxShadow:`0 0 0 4px ${colors[index]}18`,outlineColor:colors[index]}}/><p className="text-[12px] font-medium leading-relaxed">{report.title}</p><p className="mt-1 text-[10px] text-[#8a97a9]">{report.date}</p><Link href="/reportes" className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-[#f5f7fa] px-2 py-1.5 text-[10px] font-medium text-[#748399] transition hover:bg-[#eaf5f9] hover:text-[#1684a5]"><FileText className="size-3.5"/>Consultar reporte<ArrowRight className="size-3"/></Link></li>)}</ol>
       </DashboardCard>
       <DashboardCard className="quick-actions-card md:col-span-2 xl:col-span-1" title="Acciones rápidas" subtitle="Genera y comparte los resultados">
         <div className="mt-6 space-y-3">
-          <Link href="/reportes" className="quick-action"><span className="quick-action-icon bg-[#eaf5f9] text-[#1684a5]"><FilePlus2 className="size-[18px]"/></span><span className="min-w-0 flex-1"><strong>Generar reporte</strong><small>Elegir una plantilla</small></span><ArrowRight className="size-3.5 shrink-0 text-[#a2adba]"/></Link>
+          <Link href="/reportes" className="quick-action"><span className="quick-action-icon bg-[#eaf5f9] text-[#1684a5]"><FilePlus2 className="size-[18px]"/></span><span className="min-w-0 flex-1"><strong>{publicMode ? "Consultar reportes" : "Generar reporte"}</strong><small>{publicMode ? "Explorar el acervo publicado" : "Elegir una plantilla"}</small></span><ArrowRight className="size-3.5 shrink-0 text-[#a2adba]"/></Link>
           <button type="button" onClick={() => window.print()} className="quick-action"><span className="quick-action-icon bg-[#f0edfa] text-[#8b80cd]"><FileDown className="size-[18px]"/></span><span className="min-w-0 flex-1"><strong>Exportar PDF</strong><small>Guardar o imprimir el panel</small></span><ArrowRight className="size-3.5 shrink-0 text-[#a2adba]"/></button>
           <button type="button" onClick={() => downloadDashboardData(view,filters)} className="quick-action"><span className="quick-action-icon bg-[#eaf6f1] text-[#55ad99]"><ArrowDownToLine className="size-[18px]"/></span><span className="min-w-0 flex-1"><strong>Descargar datos</strong><small>Datos de la vista en CSV</small></span><ArrowRight className="size-3.5 shrink-0 text-[#a2adba]"/></button>
         </div>

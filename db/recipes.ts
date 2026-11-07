@@ -18,13 +18,14 @@ const input = z.object({
  informant:z.object({name:text,role:text,municipality:text,municipalityCode:text,interviewDate:text}).optional(),
  photos:z.array(photo).max(50).default([]), audio:z.array(audio).max(20).default([]),
 });
-const baseQuery = `SELECT r.id, r.titulo, r.descripcion, f.form, f.actualizado_en,
+const baseQuery = `SELECT r.id, r.titulo, r.descripcion, f.form, f.actualizado_en,p.published_at,
  coalesce((SELECT jsonb_agg(p.instrucciones ORDER BY p.orden) FROM ogp.receta_pasos p WHERE p.receta_id=r.id),'[]'::jsonb) AS pasos
  FROM demo.recipe_forms f JOIN ogp.recetas_documentadas r ON r.id=f.receta_id
- JOIN ogp.registros registro ON registro.id=r.id`;
-type RecipeRow = {id:string;titulo:string;descripcion:string|null;form:Partial<RecipeRecord>;actualizado_en:Date|string;pasos:string[]};
+ JOIN ogp.registros registro ON registro.id=r.id
+ LEFT JOIN demo.public_catalog_versions p ON p.kind='recipes' AND p.record_id=r.id::text`;
+type RecipeRow = {id:string;titulo:string;descripcion:string|null;form:Partial<RecipeRecord>;actualizado_en:Date|string;pasos:string[];published_at?:Date|string|null};
 function mapRow(row: RecipeRow):RecipeRecord {
- return normalizeRecipe({...createBlankRecipe(),...row.form,id:row.id,name:row.titulo,description:row.descripcion??"",steps:row.pasos,status:row.form?.status==="in-review"?"in-review":"draft",updatedAt:new Intl.DateTimeFormat("es-MX",{day:"2-digit",month:"short",year:"numeric",timeZone:"America/Mexico_City"}).format(new Date(row.actualizado_en))});
+ return normalizeRecipe({...createBlankRecipe(),...row.form,id:row.id,name:row.titulo,description:row.descripcion??"",steps:row.pasos,status:row.form?.status==="in-review"?"in-review":"draft",publicStatus:row.published_at?'published':'draft',publishedAt:row.published_at?new Date(row.published_at).toISOString():undefined,updatedAt:new Intl.DateTimeFormat("es-MX",{day:"2-digit",month:"short",year:"numeric",timeZone:"America/Mexico_City"}).format(new Date(row.actualizado_en))});
 }
 export async function listRecipes(){requireDemo();return (await pool.query(baseQuery+' WHERE registro.archivado_en IS NULL ORDER BY f.actualizado_en DESC,r.id')).rows.map(mapRow)}
 export async function getRecipe(id:string){uuid.parse(id);requireDemo();const result=await pool.query(baseQuery+' WHERE r.id=$1 AND registro.archivado_en IS NULL',[id]);return result.rows[0]?mapRow(result.rows[0]):null}

@@ -4,7 +4,7 @@ import LineaDeTiempo from "@/src/legacy-pages/LineaDeTiempo.jsx";
 
 export default function Page() {
   return (
-    <SectionShell activeItem="Línea de tiempo">
+    <SectionShell activeItem="Memoria histórica">
       <Suspense fallback={<p role="status">Cargando línea de tiempo…</p>}>
         <LineaDeTiempo />
       </Suspense>

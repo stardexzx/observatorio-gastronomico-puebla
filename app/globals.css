@@ -364,3 +364,19 @@ body { background:#f6f8fb; }
 .admin-role-label { display:inline-flex; padding:5px 9px; border-radius:6px; color:#1684a5; background:#edf7fa; font-size:10px; white-space:nowrap; }
 .admin-role-label.is-unassigned { color:#8190a4; background:#f2f4f7; }
 .role-access-table .role-column-focused { background:#e6f5fa; }
+
+/* The public sections share the institutional header and its responsive menu. */
+@media(min-width:1201px) and (max-width:1400px) {
+  .admin-header-inner { grid-template-columns:180px minmax(0,1fr) 110px; padding:0 22px; }
+  .admin-header-inner .admin-nav-link { padding:0 6px; gap:5px; font-size:11px; }
+  .admin-header-inner .admin-nav-row { gap:2px; }
+  .admin-header-inner .admin-nav-link>svg { width:14px; height:14px; }
+}
+@media(min-width:901px) and (max-width:1200px) {
+  .admin-header-inner { grid-template-columns:1fr auto; padding:10px 24px; }
+  .admin-header-inner .admin-nav-row { display:none; }
+  .admin-header-inner .admin-nav-row.is-open { display:grid; grid-column:1/-1; grid-row:2; grid-template-columns:repeat(3,minmax(0,1fr)); padding:12px 0 4px; gap:6px; }
+  .admin-header-actions { grid-column:2; grid-row:1; }
+  .admin-mobile-toggle { display:grid; }
+  .admin-header-inner .admin-nav-link { justify-content:flex-start; font-size:12px; padding:0 12px; }
+}

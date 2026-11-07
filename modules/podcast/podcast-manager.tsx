@@ -5,13 +5,14 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, CalendarDays, ExternalLink, MapPin, Mic2, MoreHorizontal, Pencil, Play, Plus, Search, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
+import { useSessionUser } from "@/components/auth/session-provider";
 import { ObservatorySidebar } from "@/components/dashboard/observatory-sidebar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { blankEpisode, deleteEpisode, readEpisodes, saveEpisode, youtubeVideoId, type Episode } from "@/data/podcasts";
+import { blankEpisode, deleteEpisode, loadEpisodes, readEpisodes, saveEpisode, youtubeVideoId, type Episode } from "@/data/podcasts";
 import { loadRecipes } from "@/data/recipe-storage";
-import { readIngredients } from "@/data/ingredient-storage";
+import { loadIngredients } from "@/data/ingredient-storage";
 import { MunicipalityField, normalizeText } from "@/modules/recipes/recipe-form-controls";
 
 type Related = {id: string; name: string};
@@ -23,12 +24,7 @@ function usePodcastData() {
   const [error, setError] = useState("");
   useEffect(() => {
     let cancelled = false;
-    Promise.resolve().then(() => {
-      if (cancelled) return;
-      try { setEpisodes(readEpisodes()); setIngredients(readIngredients()); }
-      catch { setError("No se pudo abrir el catálogo. Recarga la página para volver a intentarlo."); }
-      finally { setLoaded(true); }
-    });
+    Promise.all([loadEpisodes(),loadIngredients()]).then(([records,related])=>{if(!cancelled){setEpisodes(records);setIngredients(related)}}).catch(cause=>{if(!cancelled)setError(cause instanceof Error?cause.message:"No se pudo abrir el catálogo. Recarga la página para volver a intentarlo.")}).finally(()=>{if(!cancelled)setLoaded(true)});
     loadRecipes().then(items => { if (!cancelled) setRecipes(items); }).catch(() => {
       if (!cancelled) toast.error("No se pudo cargar el catálogo de recetas relacionadas.");
     });
@@ -69,19 +65,19 @@ export function PodcastManager() {
   const [pendingDelete,setPendingDelete]=useState<Episode|null>(null);
   const router = useRouter();
   const addEpisode=()=>{setEditing(null);setOpen(true);};
-  const confirmDelete=()=>{
+  const confirmDelete=async()=>{
     if(!pendingDelete)return;
     try{
-      const removed=deleteEpisode(pendingDelete.id);
+      const removed=await deleteEpisode(pendingDelete.id);
       setEpisodes(readEpisodes());setPendingDelete(null);
-      toast.success("Episodio eliminado",{duration:8000,action:{label:"Deshacer",onClick:()=>{
-        try{saveEpisode(removed);setEpisodes(readEpisodes());toast.success("Episodio restaurado");}
+      toast.success("Episodio eliminado",{duration:8000,action:{label:"Deshacer",onClick:async()=>{
+        try{await saveEpisode(removed);setEpisodes(readEpisodes());toast.success("Episodio restaurado");}
         catch(cause){toast.error(cause instanceof Error?cause.message:"No se pudo restaurar el episodio.");}
       }}});
     }catch(cause){toast.error(cause instanceof Error?cause.message:"No se pudo eliminar el episodio.");}
   };
-  const moveToDraft=(episode:Episode)=>{
-    try{saveEpisode({...episode,status:"draft"});setEpisodes(readEpisodes());toast.success("Episodio guardado como borrador");}
+  const moveToDraft=async(episode:Episode)=>{
+    try{await saveEpisode({...episode,status:"draft"});setEpisodes(readEpisodes());toast.success("Episodio guardado como borrador");}
     catch(cause){toast.error(cause instanceof Error?cause.message:"No se pudo actualizar el episodio.");}
   };
   const filters = [{key: "all", label: "Todos", count: episodes.length}, {key: "draft", label: "Borradores", count: episodes.filter(e => e.status === "draft").length}, {key: "published", label: "Publicados", count: episodes.filter(e => e.status === "published").length}] as const;
@@ -117,18 +113,24 @@ function Field({label, id, children}: {label:string; id:string; children:ReactNo
 }
 function EpisodeForm({open, onOpenChange, initial, recipes, ingredients, onSaved}: {open:boolean; onOpenChange:(open:boolean)=>void; initial:Episode; recipes:Related[]; ingredients:Related[]; onSaved:(episode:Episode)=>void}) {
   const [form, setForm] = useState(initial);
+  const user=useSessionUser();
+  const canPublish=user?.role==="administrador"||user?.role==="revisor";
+  const [busy,setBusy]=useState(false);
   const [url, setUrl] = useState(initial.youtubeId ? `https://www.youtube.com/watch?v=${initial.youtubeId}` : "");
   const [error, setError] = useState("");
   const videoId = youtubeVideoId(url);
   const update = <K extends keyof Episode>(key:K, value:Episode[K]) => setForm(current => ({...current, [key]:value}));
-  const submit = (status:Episode["status"]) => {
+  const submit = async(status:Episode["status"]) => {
+    if(busy)return;
     if (!videoId) {setError("Pega un enlace válido a un video de YouTube; las listas de reproducción no identifican un episodio."); return;}
     if (!form.title.trim()) {setError("Escribe un título para el episodio."); return;}
     if (status === "published" && !form.description.trim()) {setError("Añade una descripción antes de publicar el episodio."); return;}
-    try {const saved = saveEpisode({...form, title:form.title.trim(), youtubeId:videoId, status}); onSaved(saved); toast.success(status === "published" ? "Episodio publicado" : "Borrador guardado");}
+    setBusy(true);
+    try {const saved = await saveEpisode({...form, title:form.title.trim(), youtubeId:videoId, status}); onSaved(saved); toast.success(status === "published" ? "Episodio publicado" : "Borrador guardado");}
     catch (cause) {setError(cause instanceof Error ? cause.message : "No se pudo guardar el episodio.");}
+    finally{setBusy(false)}
   };
-  return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="recipe-create-dialog max-h-[90dvh] overflow-y-auto rounded-[24px] bg-white p-6 sm:max-w-[720px] sm:p-8"><DialogHeader className="text-left"><DialogTitle className="text-2xl text-[#173257]">{initial.id ? "Editar episodio" : "Añadir episodio"}</DialogTitle><DialogDescription>Vincula un video de YouTube y completa su ficha en el observatorio.</DialogDescription></DialogHeader><form className="mt-4 space-y-5" onSubmit={e => {e.preventDefault(); submit("published");}}>
+  return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="recipe-create-dialog max-h-[90dvh] overflow-y-auto rounded-[24px] bg-white p-6 sm:max-w-[720px] sm:p-8"><DialogHeader className="text-left"><DialogTitle className="text-2xl text-[#173257]">{initial.id ? "Editar episodio" : "Añadir episodio"}</DialogTitle><DialogDescription>Vincula un video de YouTube y completa su ficha en el observatorio.</DialogDescription></DialogHeader><form className="mt-4 space-y-5" onSubmit={e => {e.preventDefault(); submit(canPublish?"published":"draft");}}>
     <Field label="Enlace de YouTube *" id="podcast-url"><input id="podcast-url" required type="url" value={url} onChange={e => setUrl(e.target.value)} placeholder="https://www.youtube.com/watch?v=…" className="acervo-input w-full"/><p className="mt-2 text-[11px] leading-5 text-[#8190a4]">Sube primero el contenido a YouTube. Para reproducirlo aquí, permite su inserción y usa un video público o no listado.</p>{url && <p className={`mt-2 text-xs ${videoId ? "text-[#1684a5]" : "text-[#b65765]"}`}>{videoId ? "Enlace reconocido. Comprueba la disponibilidad en la vista previa." : "Introduce el enlace de un video, Short o transmisión de YouTube."}</p>}</Field>
     {videoId && <iframe className="aspect-video w-full rounded-xl border-0" src={`https://www.youtube-nocookie.com/embed/${videoId}`} title="Vista previa del episodio" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen/>}
     <div className="grid gap-5 sm:grid-cols-2"><Field label="Título del episodio *" id="podcast-title"><input id="podcast-title" required maxLength={200} value={form.title} onChange={e => update("title",e.target.value)} className="acervo-input w-full" placeholder="Ej. Los saberes detrás del mole"/></Field><Field label="Formato" id="podcast-format"><select id="podcast-format" value={form.format} onChange={e => update("format", e.target.value as Episode["format"])} className="acervo-input w-full"><option value="podcast">Podcast</option><option value="video">Video</option></select></Field></div>
@@ -137,6 +139,6 @@ function EpisodeForm({open, onOpenChange, initial, recipes, ingredients, onSaved
     <Field label="Municipio relacionado (opcional)" id="podcast-municipality"><MunicipalityField id="podcast-municipality" value={form.municipalityCode} onChange={item => setForm(current => ({...current, municipality:item?.name ?? "", municipalityCode:item?.code ?? ""}))}/></Field>
     <div className="grid gap-5 sm:grid-cols-2">{[{label:"Recetas relacionadas", items:recipes, key:"recipeIds" as const}, {label:"Ingredientes relacionados",items:ingredients,key:"ingredientIds" as const}].map(group => <fieldset key={group.key}><legend className="acervo-label">{group.label}</legend><div className="max-h-36 space-y-2 overflow-y-auto rounded-xl border border-[#e5eaf0] p-3">{group.items.length ? group.items.map(item => <label key={item.id} className="flex items-start gap-2 text-xs leading-5 text-[#627187]"><input type="checkbox" className="mt-1 accent-[#1684a5]" checked={form[group.key].includes(item.id)} onChange={e => update(group.key,e.target.checked ? [...form[group.key],item.id] : form[group.key].filter(id => id !== item.id))}/>{item.name}</label>) : <p className="text-xs text-[#8190a4]">No hay registros disponibles.</p>}</div></fieldset>)}</div>
     {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-xs text-red-700">{error}</p>}
-    <div className="flex flex-wrap items-center justify-end gap-3 border-t pt-5"><button type="button" className="acervo-secondary mr-auto" onClick={() => onOpenChange(false)}>Cancelar</button><button type="button" className="acervo-secondary" onClick={() => submit("draft")}>{initial.status === "published" ? "Pasar a borrador" : "Guardar borrador"}</button><button type="submit" className="acervo-primary">{initial.status === "published" ? "Guardar cambios" : "Publicar episodio"}</button></div>
+    <div className="flex flex-wrap items-center justify-end gap-3 border-t pt-5"><button type="button" className="acervo-secondary mr-auto" onClick={() => onOpenChange(false)}>Cancelar</button><button type="button" disabled={busy} className="acervo-secondary" onClick={() => submit("draft")}>{initial.status === "published" ? "Pasar a borrador" : "Guardar borrador"}</button><button type="submit" disabled={busy} className="acervo-primary">{busy?"Guardando…":!canPublish?"Guardar borrador":initial.status === "published" ? "Guardar cambios" : "Publicar episodio"}</button></div>
   </form></DialogContent></Dialog>;
 }

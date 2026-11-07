@@ -1,3 +1,5 @@
+import { catalogRequest } from "./catalog-storage";
+
 export type Episode = {
   id: string;
   title: string;
@@ -12,6 +14,9 @@ export type Episode = {
   ingredientIds: string[];
   status: "draft" | "published";
   updatedAt: string;
+  publishedAt?: string;
+  links?: {label:string;url:string}[];
+  audio?: {id:string;name:string;url:string;type:string;size:number;caption?:string}[];
 };
 
 export const blankEpisode = (): Episode => ({
@@ -36,29 +41,21 @@ export function youtubeVideoId(input: string): string | null {
   } catch { return null; }
 }
 
-const storageKey = "observatorio-podcast-v1";
-export function readEpisodes(): Episode[] {
-  const saved = window.localStorage.getItem(storageKey);
-  if (!saved) return [];
-  const records: unknown = JSON.parse(saved);
-  if (!Array.isArray(records) || records.some(item => !item || typeof item.id !== "string" || typeof item.title !== "string" || !/^[A-Za-z0-9_-]{11}$/.test(item.youtubeId) || !["draft", "published"].includes(item.status))) {
-    throw new Error("No se pudo leer el catálogo de episodios.");
-  }
-  return records.map(item => ({...blankEpisode(), ...item}));
+export const podcastStorageKey = "observatorio-podcast-v1";
+let cache:Episode[]=[];
+export function readEpisodes():Episode[]{return cache}
+export async function loadEpisodes():Promise<Episode[]>{
+  const {records}=await catalogRequest<{records:Episode[]}>("episodes");
+  cache=records.map(item=>({...blankEpisode(),...item}));return cache;
 }
-export function saveEpisode(episode: Episode): Episode {
-  const records = readEpisodes();
-  if (records.some(item => item.youtubeId === episode.youtubeId && item.id !== episode.id)) {
-    throw new Error("Este video ya está registrado. Abre su ficha para editarlo.");
-  }
-  const saved = {...episode, id: episode.id || crypto.randomUUID(), updatedAt: new Date().toISOString()};
-  window.localStorage.setItem(storageKey, JSON.stringify([saved, ...records.filter(item => item.id !== saved.id)]));
-  return saved;
+export async function saveEpisode(episode:Episode):Promise<Episode>{
+  if(cache.some(item=>item.youtubeId===episode.youtubeId&&item.id!==episode.id))throw new Error("Este video ya está registrado. Abre su ficha para editarlo.");
+  const exists=cache.some(item=>item.id===episode.id);
+  const {record}=await catalogRequest<{record:Episode}>("episodes",exists?episode.id:undefined,exists?"PUT":"POST",episode);
+  const saved={...blankEpisode(),...record};cache=[saved,...cache.filter(item=>item.id!==saved.id)];return saved;
 }
-export function deleteEpisode(id: string): Episode {
-  const records = readEpisodes();
-  const episode = records.find(item => item.id === id);
-  if (!episode) throw new Error("No encontramos este episodio. Recarga el catálogo.");
-  window.localStorage.setItem(storageKey, JSON.stringify(records.filter(item => item.id !== id)));
-  return episode;
+export async function deleteEpisode(id:string):Promise<Episode>{
+  const episode=cache.find(item=>item.id===id);
+  if(!episode)throw new Error("No encontramos este episodio. Recarga el catálogo.");
+  await catalogRequest("episodes",id,"DELETE");cache=cache.filter(item=>item.id!==id);return episode;
 }

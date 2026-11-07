@@ -14,14 +14,16 @@ npm run db:up
 
 `db:up` espera a que PostgreSQL/PostGIS esté listo e instala el esquema cuando la base está vacía. Sobre una base instalada aplica únicamente las migraciones adicionales. La operación es transaccional y no crea cuentas, recetas ni otros registros de muestra. El proyecto Docker `ogp_unificado` usa el volumen `ogp_unificado_data`; los contenedores y volúmenes antiguos de `ogp` permanecen disponibles.
 
-Con la base preparada, crea el enlace de activación para tu correo real:
+Con la base preparada, ejecuta `npm run dev` y abre <http://localhost:5173> para consultar la página pública sin cuenta.
+
+Solo para administrar el contenido, crea el enlace inicial de activación para tu correo real:
 
 ```sh
 node --env-file=.env.local scripts/setup-login.mjs tu-correo@ejemplo.com
 npm run dev
 ```
 
-Abre el enlace de activación que imprime el comando y establece tu contraseña, de 12 a 128 caracteres. Caduca a las 24 horas y solo se usa para la primera cuenta de administrador. No hay contraseña predeterminada. Después inicia sesión en <http://localhost:5173>. Si la cuenta ya está activada, no vuelvas a ejecutar el comando de activación: usa el inicio de sesión habitual. Las siguientes cuentas se administran dentro del panel.
+Abre el enlace de activación que imprime el comando y establece tu contraseña, de 12 a 128 caracteres. Caduca a las 24 horas y solo se usa para la primera cuenta de administrador. No hay contraseña predeterminada. Después usa «Acceso del equipo» en la página o abre <http://localhost:5173/iniciar-sesion>. Si la cuenta ya está activada, no vuelvas a ejecutar el comando de activación: usa el inicio de sesión habitual. Las siguientes cuentas se administran dentro del panel.
 
 ## Si ya instalaste la entrega del creador de la BD
 
@@ -74,3 +76,14 @@ npm run db:migrate
 ```
 
 No ejecutes el instalador SQL inicial manualmente sobre un esquema existente. Las recetas se crean desde el panel; los datos locales anteriores del navegador no se importan automáticamente a PostgreSQL. El documento [inicio-sesion.md](inicio-sesion.md) describe las cuentas y sesiones.
+
+## Actualizar a la versión pública
+
+Con tu mismo PostgreSQL y `.env.local`, ejecuta:
+
+```sh
+npm run db:migrate
+npm run dev
+```
+
+No debes crear otra cuenta ni volver a instalar el esquema. Se añaden catálogos, versiones públicas aprobadas y la memoria histórica. Las fichas previas siguen guardadas; los borradores no se muestran al visitante hasta publicarlos con administración o revisión. Los archivos locales antiguos no se importan automáticamente.

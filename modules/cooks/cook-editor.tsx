@@ -1,6 +1,6 @@
 "use client";
 /* eslint-disable @next/next/no-img-element -- Previsualizaciones locales de archivos seleccionados. */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Check, ChefHat, Cloud, FileCheck2, ImagePlus, MapPin, Plus, ScrollText, Trash2, Utensils } from "lucide-react";
 import { toast } from "sonner";
@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { useSessionUser } from "@/components/auth/session-provider";
 import { findCook, upsertCook } from "@/data/cook-storage";
 import { cookRoles, cookSources, cookSpecialties, type CookMedia, type CookRecord } from "@/data/cooks";
 import { loadRecipes } from "@/data/recipe-storage";
@@ -22,7 +23,10 @@ const stateOf=(item:CookRecord):Record<SectionId,boolean>=>({general:!!(item.nam
 export function CookEditor(){
   const params=useParams<{id:string}>();
   const router=useRouter();
+  const user=useSessionUser();
+  const canPublish=user?.role==="administrador"||user?.role==="revisor";
   const [item,setItem]=useState<CookRecord|null>(null);
+  const savedFingerprint=useRef("");
   const [active,setActive]=useState<SectionId>("general");
   const [loaded,setLoaded]=useState(false);
   const [saving,setSaving]=useState(false);
@@ -33,12 +37,9 @@ export function CookEditor(){
   const [recipesError,setRecipesError]=useState("");
   const [recipeAttempt,setRecipeAttempt]=useState(0);
   useEffect(()=>{
-    const timer=window.setTimeout(()=>{
-      try{setItem(findCook(params.id));setLoadError("")}
-      catch(error){setLoadError(error instanceof Error?error.message:"No se pudo cargar la ficha.")}
-      setLoaded(true);
-    },0);
-    return()=>window.clearTimeout(timer);
+    let current=true;
+    findCook(params.id).then(record=>{if(current){savedFingerprint.current=JSON.stringify(record);setItem(record);setLoadError("")}}).catch(error=>{if(current)setLoadError(error instanceof Error?error.message:"No se pudo cargar la ficha.")}).finally(()=>{if(current)setLoaded(true)});
+    return()=>{current=false};
   },[params.id]);
   useEffect(()=>{
     let current=true;
@@ -56,12 +57,12 @@ export function CookEditor(){
   const percentage=Math.round(completed/sections.length*100);
   const mandatory=!!(complete?.general&&complete.territory&&complete.trajectory&&complete.source);
   useEffect(()=>{
-    if(!item||!loaded)return;
+    if(!item||!loaded||JSON.stringify(item)===savedFingerprint.current)return;
     const start=window.setTimeout(()=>setSaving(true),0);
-    const save=window.setTimeout(()=>{
+    const save=window.setTimeout(async()=>{
       try{
-        upsertCook({...item,completeness:percentage,updatedAt:new Intl.DateTimeFormat("es-MX",{day:"2-digit",month:"short",year:"numeric"}).format(new Date())});
-        setStorageError("");
+        await upsertCook({...item,completeness:percentage,updatedAt:new Intl.DateTimeFormat("es-MX",{day:"2-digit",month:"short",year:"numeric"}).format(new Date())});
+        savedFingerprint.current=JSON.stringify(item);setStorageError("");
       }catch(error){setStorageError(error instanceof Error?error.message:"No se pudo guardar la ficha.")}
       finally{setSaving(false)}
     },500);
@@ -73,11 +74,19 @@ export function CookEditor(){
   const index=sections.findIndex(section=>section.id===active);
   const current=sections[index];
   const CurrentIcon=current.icon;
-  const submit=()=>{
+  const submit=async()=>{
     if(!mandatory)return;
     const next={...item,status:"in-review" as const,completeness:percentage};
-    try{upsertCook(next);setItem(next);setStorageError("");toast.success("Registro enviado a revisión")}
+    try{await upsertCook(next);savedFingerprint.current=JSON.stringify(next);setItem(next);setStorageError("");toast.success("Registro enviado a revisión")}
     catch(error){const message=error instanceof Error?error.message:"No se pudo guardar la ficha.";setStorageError(message);toast.error(message)}
+  };
+  const publish=async()=>{
+    if(!canPublish)return;
+    const next={...item,status:item.status==="verified"?"draft" as const:"verified" as const,completeness:percentage};
+    setSaving(true);
+    try{const saved=await upsertCook(next);savedFingerprint.current=JSON.stringify(saved);setItem(saved);setStorageError("");toast.success(next.status==="verified"?"Ficha publicada":"Publicación retirada");}
+    catch(error){const message=error instanceof Error?error.message:"No se pudo actualizar la publicación.";setStorageError(message);toast.error(message);}
+    finally{setSaving(false)}
   };
   const addPhotos=async(files:FileList|null)=>{
     if(!files?.length)return;
@@ -86,7 +95,7 @@ export function CookEditor(){
       setItem(current=>current?{...current,photos:[...current.photos,...photos]}:current);
     }catch(error){toast.error(error instanceof Error?error.message:"No se pudieron cargar las fotografías.")}
   };
-  return <main className="recipes-ui min-h-screen overflow-x-auto bg-[#f5f7f6] text-[#173257]"><header className="mx-auto flex min-h-[92px] w-[calc(100vw-24px)] min-w-[1208px] max-w-[1388px] items-center gap-4 py-4"><Button variant="outline" size="icon" onClick={()=>router.push("/cocineras")} className="size-11 rounded-full bg-white"><ArrowLeft/></Button><div><h1 className="editorial-title text-[31px] font-bold">{item.name}</h1><div className="flex items-center gap-3 text-xs text-[#8491a8]"><span className="font-medium text-[#173257]">• {item.status==="in-review"?"En revisión":item.status==="verified"?"Verificada/o":"Borrador"}</span><span>{item.municipality} · {item.region}</span><span className="flex items-center gap-1"><Cloud className="size-3.5"/>{storageError?"Sin guardar":saving?"Guardando…":"Guardado automático"}</span></div></div><Button disabled={!mandatory} onClick={submit} className="ml-auto h-11 rounded-full bg-[#cf1760] px-6 hover:bg-[#ac124f] disabled:bg-[#e2e7ef] disabled:text-[#9aa6ba]">Enviar a revisión</Button></header>{storageError&&<div role="alert" className="mx-auto mb-4 flex max-w-[1388px] items-center gap-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"><p>{storageError}</p><Button variant="outline" onClick={()=>setItem(current=>current?{...current}:current)}>Reintentar guardado</Button></div>}<div className="mx-auto grid w-[calc(100vw-24px)] min-w-[1208px] max-w-[1388px] items-start gap-6 pb-10" style={{gridTemplateColumns:"260px minmax(600px,780px) 300px"}}><aside className="sticky top-5 rounded-[20px] border bg-white p-4"><div className="flex items-center gap-3 border-b px-2 pb-5"><div className="grid size-16 place-items-center rounded-full text-lg font-bold" style={{background:`conic-gradient(#007f78 ${percentage}%,#e7eced 0)`,padding:6}}><span className="grid size-full place-items-center rounded-full bg-white">{percentage}%</span></div><div><strong className="block">Ficha</strong><span className="text-sm text-[#8491a8]">{completed} de {sections.length} secciones</span></div></div><nav className="mt-4 space-y-1">{sections.map(({id,label,icon:Icon})=>{const done=complete?.[id];return <button key={id} onClick={()=>setActive(id)} className={`flex w-full items-center gap-3 rounded-xl p-2.5 text-left ${active===id?"bg-[#eef2f4]":"hover:bg-[#f6f8f8]"}`}><span className={`grid size-10 shrink-0 place-items-center rounded-xl ${active===id?"bg-[#173257] text-white":done?"bg-[#dff2ed] text-[#007f78]":"bg-[#f1f4f5] text-[#66758d]"}`}>{done?<Check className="size-5"/>:<Icon className="size-5"/>}</span><span><strong className="block text-sm">{label}</strong><small className={done?"text-[#007f78]":id==="media"||id==="recipes"||id==="memory"?"text-[#98a3b7]":"text-[#d65c32]"}>{done?"Completa":id==="media"||id==="recipes"||id==="memory"?"Opcional":"Pendiente"}</small></span></button>})}</nav></aside><section className="min-h-[520px] rounded-[20px] border bg-white p-8"><div className="mb-7 flex items-center gap-3"><span className="grid size-12 place-items-center rounded-xl bg-[#edf1f7] text-[#173257]"><CurrentIcon className="size-6"/></span><div><h2 className="editorial-title text-[24px] font-bold">{current.label}</h2><p className="text-sm text-[#66758d]">{current.description}</p></div></div>{active==="general"&&<General item={item} update={update}/>} {active==="territory"&&<Territory item={item} update={update}/>} {active==="trajectory"&&<Trajectory item={item} update={update}/>} {active==="recipes"&&<Field label="Recetas relacionadas">{recipesLoading?<p className="text-sm text-[#66758d]">Cargando recetas…</p>:recipesError?<div role="alert" className="space-y-3 text-sm text-red-800"><p>{recipesError}</p><Button variant="outline" onClick={()=>setRecipeAttempt(value=>value+1)}>Reintentar carga</Button></div>:recipes.length?<ChoiceChips options={Array.from(new Set([...recipes.map(recipe=>recipe.name),...item.linkedRecipes]))} value={item.linkedRecipes} onChange={value=>update("linkedRecipes",value)}/>:<p className="text-sm text-[#66758d]">No hay recetas registradas. Crea una receta para vincularla a esta ficha.</p>}{!!item.linkedRecipes.length&&(recipesLoading||recipesError||!recipes.length)&&<div className="mt-4"><p className="mb-2 text-xs text-[#66758d]">Vínculos guardados en esta ficha</p><Chips items={item.linkedRecipes} onRemove={name=>update("linkedRecipes",item.linkedRecipes.filter(value=>value!==name))}/></div>}</Field>} {active==="memory"&&<Memory item={item} update={update}/>} {active==="source"&&<Source item={item} update={update}/>} {active==="media"&&<Media item={item} update={update} addPhotos={addPhotos}/>}<div className="mt-8 flex justify-between border-t pt-5"><Button variant="ghost" disabled={index===0} onClick={()=>setActive(sections[index-1].id)}><ArrowLeft/>Anterior</Button>{index<sections.length-1&&<Button variant="outline" className="rounded-full" onClick={()=>setActive(sections[index+1].id)}>Siguiente: {sections[index+1].label}<ArrowRight/></Button>}</div></section><aside className="sticky top-5 rounded-[20px] bg-[#173257] p-5 text-white"><p className="text-xs text-[#b9c8dd]">Secciones obligatorias</p><h3 className="mt-1 text-lg font-bold">{mandatory?"Lista para enviar a revisión":`Faltan ${[complete?.general,complete?.territory,complete?.trajectory,complete?.source].filter(value=>!value).length} para enviar a revisión`}</h3><div className="mt-4 space-y-1.5">{(["general","territory","trajectory","source"] as SectionId[]).map(id=>{const section=sections.find(value=>value.id===id)!;const done=complete?.[id];return <button key={id} onClick={()=>setActive(id)} className="flex w-full items-center gap-3 rounded-xl bg-white/10 p-3 text-left"><span className={`grid size-6 place-items-center rounded-full ${done?"bg-[#55dfaa] text-[#0c5a42]":"bg-[#ffad82] text-[#7f2d13]"}`}>{done?<Check className="size-4"/>:<strong>!</strong>}</span><span><strong className="block text-sm">{section.label}</strong><small className="text-[#c8d4e5]">{done?"Completa":"Pendiente"}</small></span></button>})}</div><p className="mt-4 text-xs text-[#b9c8dd]">Recetas, memoria y multimedia son opcionales. El consentimiento es obligatorio.</p></aside></div></main>}
+  return <main className="recipes-ui min-h-screen overflow-x-auto bg-[#f5f7f6] text-[#173257]"><header className="mx-auto flex min-h-[92px] w-[calc(100vw-24px)] min-w-[1208px] max-w-[1388px] items-center gap-4 py-4"><Button variant="outline" size="icon" onClick={()=>router.push("/cocineras")} className="size-11 rounded-full bg-white"><ArrowLeft/></Button><div><h1 className="editorial-title text-[31px] font-bold">{item.name}</h1><div className="flex items-center gap-3 text-xs text-[#8491a8]"><span className="font-medium text-[#173257]">• {item.status==="in-review"?"En revisión":item.status==="verified"?"Verificada/o":"Borrador"}</span><span>{item.municipality} · {item.region}</span><span className="flex items-center gap-1"><Cloud className="size-3.5"/>{storageError?"Sin guardar":saving?"Guardando…":"Guardado automático"}</span></div></div><div className="ml-auto flex gap-2"><Button disabled={!mandatory||saving} onClick={submit} className="h-11 rounded-full bg-[#cf1760] px-6 hover:bg-[#ac124f] disabled:bg-[#e2e7ef] disabled:text-[#9aa6ba]">Enviar a revisión</Button>{canPublish&&<Button variant="outline" disabled={saving||(!mandatory&&item.status!=="verified")} onClick={publish} className="h-11 rounded-full bg-white px-6">{item.status==="verified"?"Retirar publicación":"Publicar ficha"}</Button>}</div></header>{storageError&&<div role="alert" className="mx-auto mb-4 flex max-w-[1388px] items-center gap-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"><p>{storageError}</p><Button variant="outline" onClick={()=>setItem(current=>current?{...current}:current)}>Reintentar guardado</Button></div>}<div className="mx-auto grid w-[calc(100vw-24px)] min-w-[1208px] max-w-[1388px] items-start gap-6 pb-10" style={{gridTemplateColumns:"260px minmax(600px,780px) 300px"}}><aside className="sticky top-5 rounded-[20px] border bg-white p-4"><div className="flex items-center gap-3 border-b px-2 pb-5"><div className="grid size-16 place-items-center rounded-full text-lg font-bold" style={{background:`conic-gradient(#007f78 ${percentage}%,#e7eced 0)`,padding:6}}><span className="grid size-full place-items-center rounded-full bg-white">{percentage}%</span></div><div><strong className="block">Ficha</strong><span className="text-sm text-[#8491a8]">{completed} de {sections.length} secciones</span></div></div><nav className="mt-4 space-y-1">{sections.map(({id,label,icon:Icon})=>{const done=complete?.[id];return <button key={id} onClick={()=>setActive(id)} className={`flex w-full items-center gap-3 rounded-xl p-2.5 text-left ${active===id?"bg-[#eef2f4]":"hover:bg-[#f6f8f8]"}`}><span className={`grid size-10 shrink-0 place-items-center rounded-xl ${active===id?"bg-[#173257] text-white":done?"bg-[#dff2ed] text-[#007f78]":"bg-[#f1f4f5] text-[#66758d]"}`}>{done?<Check className="size-5"/>:<Icon className="size-5"/>}</span><span><strong className="block text-sm">{label}</strong><small className={done?"text-[#007f78]":id==="media"||id==="recipes"||id==="memory"?"text-[#98a3b7]":"text-[#d65c32]"}>{done?"Completa":id==="media"||id==="recipes"||id==="memory"?"Opcional":"Pendiente"}</small></span></button>})}</nav></aside><section className="min-h-[520px] rounded-[20px] border bg-white p-8"><div className="mb-7 flex items-center gap-3"><span className="grid size-12 place-items-center rounded-xl bg-[#edf1f7] text-[#173257]"><CurrentIcon className="size-6"/></span><div><h2 className="editorial-title text-[24px] font-bold">{current.label}</h2><p className="text-sm text-[#66758d]">{current.description}</p></div></div>{active==="general"&&<General item={item} update={update}/>} {active==="territory"&&<Territory item={item} update={update}/>} {active==="trajectory"&&<Trajectory item={item} update={update}/>} {active==="recipes"&&<Field label="Recetas relacionadas">{recipesLoading?<p className="text-sm text-[#66758d]">Cargando recetas…</p>:recipesError?<div role="alert" className="space-y-3 text-sm text-red-800"><p>{recipesError}</p><Button variant="outline" onClick={()=>setRecipeAttempt(value=>value+1)}>Reintentar carga</Button></div>:recipes.length?<ChoiceChips options={Array.from(new Set([...recipes.map(recipe=>recipe.name),...item.linkedRecipes]))} value={item.linkedRecipes} onChange={value=>update("linkedRecipes",value)}/>:<p className="text-sm text-[#66758d]">No hay recetas registradas. Crea una receta para vincularla a esta ficha.</p>}{!!item.linkedRecipes.length&&(recipesLoading||recipesError||!recipes.length)&&<div className="mt-4"><p className="mb-2 text-xs text-[#66758d]">Vínculos guardados en esta ficha</p><Chips items={item.linkedRecipes} onRemove={name=>update("linkedRecipes",item.linkedRecipes.filter(value=>value!==name))}/></div>}</Field>} {active==="memory"&&<Memory item={item} update={update}/>} {active==="source"&&<Source item={item} update={update}/>} {active==="media"&&<Media item={item} update={update} addPhotos={addPhotos}/>}<div className="mt-8 flex justify-between border-t pt-5"><Button variant="ghost" disabled={index===0} onClick={()=>setActive(sections[index-1].id)}><ArrowLeft/>Anterior</Button>{index<sections.length-1&&<Button variant="outline" className="rounded-full" onClick={()=>setActive(sections[index+1].id)}>Siguiente: {sections[index+1].label}<ArrowRight/></Button>}</div></section><aside className="sticky top-5 rounded-[20px] bg-[#173257] p-5 text-white"><p className="text-xs text-[#b9c8dd]">Secciones obligatorias</p><h3 className="mt-1 text-lg font-bold">{mandatory?"Lista para enviar a revisión":`Faltan ${[complete?.general,complete?.territory,complete?.trajectory,complete?.source].filter(value=>!value).length} para enviar a revisión`}</h3><div className="mt-4 space-y-1.5">{(["general","territory","trajectory","source"] as SectionId[]).map(id=>{const section=sections.find(value=>value.id===id)!;const done=complete?.[id];return <button key={id} onClick={()=>setActive(id)} className="flex w-full items-center gap-3 rounded-xl bg-white/10 p-3 text-left"><span className={`grid size-6 place-items-center rounded-full ${done?"bg-[#55dfaa] text-[#0c5a42]":"bg-[#ffad82] text-[#7f2d13]"}`}>{done?<Check className="size-4"/>:<strong>!</strong>}</span><span><strong className="block text-sm">{section.label}</strong><small className="text-[#c8d4e5]">{done?"Completa":"Pendiente"}</small></span></button>})}</div><p className="mt-4 text-xs text-[#b9c8dd]">Recetas, memoria y multimedia son opcionales. El consentimiento es obligatorio.</p></aside></div></main>}
 
 type Update=<K extends keyof CookRecord>(key:K,value:CookRecord[K])=>void;
 function Field({label,children}:{label:string;children:React.ReactNode}){return <div><Label className="mb-2 block">{label}</Label>{children}</div>}

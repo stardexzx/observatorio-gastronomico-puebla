@@ -1,0 +1,14 @@
+.public-map .municipal-canvas{position:relative;overflow:hidden;border:1px solid #e5eaf0;border-radius:12px;background:#E9EEE6;}
+.public-map .municipal-canvas svg{display:block;width:100%;height:440px;touch-action:none;cursor:grab;}
+.public-map .municipal-canvas path[role=button]{cursor:pointer;outline:none;}
+.public-map .municipal-canvas path[role=button]:hover,.public-map .municipal-canvas path[role=button]:focus{fill:#C1531E;stroke:#10284C;stroke-width:2px;}
+.public-map .map-toolbar{position:absolute;right:12px;bottom:12px;display:flex;gap:5px;}
+.public-map .map-toolbar button{display:grid;width:36px;height:36px;place-items:center;padding:0;border:1px solid #e5eaf0;border-radius:8px;background:#fff;color:#033AA5;box-shadow:0 2px 6px #001b6210;}
+.public-map .map-toolbar button:hover{background:#edf7fa;}
+.public-map .map-toolbar button svg{width:17px;height:17px;}
+.public-map .municipality-tip{position:absolute;top:12px;left:12px;display:flex;max-width:70%;flex-direction:column;gap:4px;border:1px solid #e5eaf0;border-radius:9px;background:#fff;padding:10px 12px;color:#001B62;pointer-events:none;font-size:11px;box-shadow:0 3px 12px #001b6210;}
+.public-map .municipality-tip span{color:#8190a4;font-size:10px;}
+.public-map .municipal-legend{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;margin-top:14px;font-size:10px;line-height:1.7;color:#8190a4;}
+.public-map .municipal-legend>div{display:flex;align-items:center;gap:4px;}
+.public-map .municipal-legend i{display:block;width:17px;height:8px;border:1px solid #ddd;border-radius:2px;}
+@media(max-width:640px){.public-map .municipal-canvas svg{height:340px;}}

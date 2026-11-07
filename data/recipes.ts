@@ -6,6 +6,7 @@ export type RecipeRecord = {
   id:string; name:string; category:string; municipality:string; municipalityCode:string; region:string; status:RecipeStatus; updatedAt:string;
   source:string; sourceReference:string; sourceUrl:string; consultationDate:string; description:string; vigency:string; ingredients:string[]; techniques:string[];
   preparation:string; steps:string[]; occasion:string; months:string[]; occasions:string[]; informant:RecipeInformant; photos:RecipeMedia[]; audio:RecipeMedia[]; completeness:number;
+  publicStatus?:'published'|'draft'; publishedAt?:string;
 };
 
 export const pueblaRegions = ["Sierra Norte", "Sierra Nororiental", "Valle de Serdán", "Angelópolis", "Valle de Atlixco y Matamoros", "Mixteca", "Tehuacán y Sierra Negra"];

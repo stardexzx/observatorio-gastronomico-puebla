@@ -16,20 +16,21 @@ const periods = [
 const normalize = (text: string) => text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es-MX").trim();
 
 export function DashboardFilters({ onGenerate }: { onGenerate: () => void }) {
-  const { filters, setFilter, resetFilters } = useDashboard();
+  const { filters, setFilter, resetFilters, publicMode, years } = useDashboard();
+  const availablePeriods: {value:string;label:string;dates:string;compact:string}[] = publicMode ? [{value:"todos",label:"Todo el periodo",dates:"Todas las publicaciones",compact:"Todo el periodo"}, ...years.map(year=>({value:year,label:year,dates:`Publicaciones de ${year}`,compact:`Año ${year}`}))] : [...periods];
   const [periodOpen, setPeriodOpen] = useState(false);
   const [municipalityOpen, setMunicipalityOpen] = useState(false);
   const [municipalitySearch, setMunicipalitySearch] = useState("");
   const activeCount = Number(filters.municipality !== "todos") + Number(filters.category !== "todas");
-  const hasFilters = activeCount > 0 || filters.period !== "2023-2024";
-  const periodLabel = periods.find(period => period.value === filters.period)!.compact;
+  const hasFilters = activeCount > 0 || filters.period !== (publicMode ? "todos" : "2023-2024");
+  const periodLabel = availablePeriods.find(period => period.value === filters.period)?.compact ?? filters.period;
   const municipalityMatches = pueblaMunicipalities.filter(item => normalize(`${item.name} ${item.code}`).includes(normalize(municipalitySearch))).length;
   const municipalityLabel = pueblaMunicipalities.find(item => item.code === filters.municipality)?.name ?? "Todos los municipios";
 
   return <div className="dashboard-toolbar" role="group" aria-label="Filtros del dashboard">
     <Popover open={periodOpen} onOpenChange={setPeriodOpen}><PopoverTrigger asChild><button type="button" aria-label={`Periodo: ${periodLabel}`} className="toolbar-control toolbar-period"><CalendarDays className="size-3.5"/><span>{periodLabel}</span><ChevronDown className="size-3"/></button></PopoverTrigger><PopoverContent align="end" sideOffset={10} className="period-menu w-[min(290px,calc(100vw-32px))] rounded-xl p-2">
       <h2 className="px-3 pb-2 pt-2 text-[11px] font-semibold text-[#748399]">Periodo de consulta</h2>
-      <div role="group" aria-label="Seleccionar periodo">{periods.map(period => <button key={period.value} type="button" aria-pressed={period.value === filters.period} onClick={() => {setFilter("period", period.value);setPeriodOpen(false);}} className={`period-option ${period.value === filters.period ? "is-selected" : ""}`}><span><strong>{period.label}</strong><small>{period.dates}</small></span>{period.value === filters.period && <Check className="size-4 shrink-0 text-[#1684a5]"/>}</button>)}</div>
+      <div role="group" aria-label="Seleccionar periodo">{availablePeriods.map(period => <button key={period.value} type="button" aria-pressed={period.value === filters.period} onClick={() => {setFilter("period", period.value);setPeriodOpen(false);}} className={`period-option ${period.value === filters.period ? "is-selected" : ""}`}><span><strong>{period.label}</strong><small>{period.dates}</small></span>{period.value === filters.period && <Check className="size-4 shrink-0 text-[#1684a5]"/>}</button>)}</div>
     </PopoverContent></Popover>
     <Popover><PopoverTrigger asChild><button type="button" className={`toolbar-control ${activeCount ? "has-filters" : ""}`} aria-label={activeCount ? `Filtros, ${activeCount} ${activeCount === 1 ? "activo" : "activos"}` : "Filtros"}><SlidersHorizontal className="size-3.5"/>Filtros{activeCount > 0 && <span className="toolbar-count">{activeCount}</span>}</button></PopoverTrigger><PopoverContent align="end" sideOffset={10} className="w-[min(320px,calc(100vw-32px))] rounded-xl p-4">
       <div className="mb-5 flex items-center justify-between gap-2"><h2 className="text-sm font-semibold">Filtrar registros</h2>{hasFilters && <button type="button" onClick={resetFilters} className="flex items-center gap-1.5 text-[11px] text-[#1684a5] hover:underline"><RotateCcw className="size-3"/>Restablecer</button>}</div>
@@ -52,6 +53,6 @@ export function DashboardFilters({ onGenerate }: { onGenerate: () => void }) {
       </div>
       <p className="mt-4 border-t pt-3 text-[10px] leading-relaxed text-[#8190a4]">Los resultados se actualizan al seleccionar un filtro.</p>
     </PopoverContent></Popover>
-    <button type="button" onClick={onGenerate} className="toolbar-control toolbar-report"><FileDown className="size-3.5"/>Generar reporte</button>
+    <button type="button" onClick={onGenerate} className="toolbar-control toolbar-report"><FileDown className="size-3.5"/>{publicMode ? "Descargar reporte" : "Generar reporte"}</button>
   </div>;
 }

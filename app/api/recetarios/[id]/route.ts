@@ -3,14 +3,12 @@ import {stat} from 'node:fs/promises';
 import {join} from 'node:path';
 import {Readable} from 'node:stream';
 import {NextRequest,NextResponse} from 'next/server';
-import {getSessionUser} from '@/lib/auth/session';
 import {recipeBooks} from '@/data/recipe-books';
 import {parseByteRange} from '@/lib/book-navigation';
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
 async function serve(request:NextRequest,context:{params:Promise<{id:string}>},head=false){
  try{
-  if(!await getSessionUser())return NextResponse.json({error:'Inicia sesión para leer el recetario.'},{status:401});
   const {id}=await context.params;const book=recipeBooks.find(item=>item.id===id);
   if(!book)return NextResponse.json({error:'No encontramos ese recetario.'},{status:404});
   const path=join(process.cwd(),'assets','recetarios',book.filename);const {size}=await stat(path);

@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { loadEnvFile } from "node:process";
 import pg from "pg";
+import { timelineEras } from "../src/data/timeline.js";
 
 // The unified app uses its own configuration, never the legacy .env file.
 try {
@@ -34,9 +35,12 @@ try {
   await client.query("SELECT pg_advisory_xact_lock(982341)");
   const { rows: [state] } = await client.query("SELECT to_regnamespace('ogp') IS NOT NULL AS installed");
   if (!state.installed) await client.query(await sqlFile("observatorio_puebla.sql"));
-  for (const migration of ["006_consultar_fichas_tipo.sql", "006_login.sql", "007_panel_forms.sql"]) {
+  for (const migration of ["006_consultar_fichas_tipo.sql", "006_login.sql", "007_panel_forms.sql", "008_public_catalogs.sql"]) {
     await client.query(await sqlFile(`migrations/${migration}`));
   }
+  // Existing editorial history is content supplied in this project, not synthetic catalog data.
+  // Preserve an edited database version when applying migrations again.
+  await client.query("INSERT INTO demo.editorial_content(key,content) VALUES('timeline',$1) ON CONFLICT(key) DO NOTHING",[JSON.stringify(timelineEras)]);
   await client.query("COMMIT");
   transaction = false;
   console.log(`PostgreSQL preparado: ${state.installed ? "esquema existente conservado" : "esquema inicial instalado"} y migraciones del panel aplicadas. No se crearon cuentas ni fichas.`);

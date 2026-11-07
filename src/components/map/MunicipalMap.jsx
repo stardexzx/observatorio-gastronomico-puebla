@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Plus, Minus, RotateCcw } from "lucide-react";
 const COLORS = ["#EFEADC", "#F6E2B4", "#F1BD66", "#D9772B", "#B23A1F"];
 const BASE = { x: 0, y: 0, w: 620, h: 440 };
 function pointsOf(feature) {
@@ -279,7 +280,7 @@ export default function MunicipalMap({
             onClick={() => zoom(1 / 1.4)}
             aria-label="Acercar mapa"
           >
-            +
+            <Plus size={17} aria-hidden="true" />
           </button>
           <button
             className="g-btn"
@@ -287,7 +288,7 @@ export default function MunicipalMap({
             onClick={() => zoom(1.4)}
             aria-label="Alejar mapa"
           >
-            −
+            <Minus size={17} aria-hidden="true" />
           </button>
           <button
             className="g-btn"
@@ -295,7 +296,7 @@ export default function MunicipalMap({
             onClick={() => setView(BASE)}
             aria-label="Restablecer mapa"
           >
-            ↺
+            <RotateCcw size={17} aria-hidden="true" />
           </button>
         </div>
         {hover && (

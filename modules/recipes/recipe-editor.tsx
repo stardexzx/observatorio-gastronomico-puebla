@@ -6,14 +6,17 @@ import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, BookOpen, CalendarDays, Check, ChefHat, FileAudio, Globe2, ImagePlus, Info, ListOrdered, MapPin, Mic2, NotebookTabs, Plus, Save, ScrollText, Send, Trash2, UploadCloud, X } from "lucide-react";
 import { toast } from "sonner";
 import { ObservatorySidebar } from "@/components/dashboard/observatory-sidebar";
+import { useSessionUser } from "@/components/auth/session-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { findRecipe, readRecipes, upsertRecipe } from "@/data/recipe-storage";
-import { ingredientCatalog, informantRoles, recipeCategories, recipeMonths, recipeOccasions, recipeSources, recipeSourceComplete, recipeStatusLabels, recipeVigencies, traditionalTechniques, type RecipeMedia, type RecipeRecord } from "@/data/recipes";
+import { loadIngredients } from "@/data/ingredient-storage";
+import { informantRoles, recipeCategories, recipeMonths, recipeOccasions, recipeSources, recipeSourceComplete, recipeStatusLabels, recipeVigencies, traditionalTechniques, type RecipeMedia, type RecipeRecord } from "@/data/recipes";
 import { MunicipalityField, SearchSelect, normalizeText } from "./recipe-form-controls";
+import { RecipePublicationControls } from "./recipe-publication-controls";
 
 type SectionId="general"|"ingredients"|"preparation"|"temporality"|"source"|"media";
 const sections:{id:SectionId;label:string;description:string;icon:typeof Info}[]=[
@@ -32,20 +35,27 @@ function sectionState(recipe:RecipeRecord):Record<SectionId,boolean>{return {
 
 export function RecipeEditor(){
   const params=useParams<{id:string}>();const router=useRouter();
+  const user=useSessionUser();const canEdit=user?.role==="administrador"||user?.role==="capturista";
   const [recipe,setRecipe]=useState<RecipeRecord|null>(null);const [active,setActive]=useState<SectionId>("general");
   const [loaded,setLoaded]=useState(false);const [saving,setSaving]=useState(false);const [loadError,setLoadError]=useState("");const [saveError,setSaveError]=useState("");const [lastSaved,setLastSaved]=useState("");
-  const [ingredientOptions,setIngredientOptions]=useState(ingredientCatalog);const [creatingIngredient,setCreatingIngredient]=useState(false);const [ingredientName,setIngredientName]=useState("");const [readingFiles,setReadingFiles]=useState(false);const [selectedIngredient,setSelectedIngredient]=useState("");
+  const [ingredientOptions,setIngredientOptions]=useState<string[]>([]);const [creatingIngredient,setCreatingIngredient]=useState(false);const [ingredientName,setIngredientName]=useState("");const [readingFiles,setReadingFiles]=useState(false);const [selectedIngredient,setSelectedIngredient]=useState("");
   useEffect(()=>{let cancelled=false;findRecipe(params.id).then(item=>{if(!cancelled){setRecipe(item);setLastSaved(item?JSON.stringify(item):"");}}).catch(error=>{if(!cancelled)setLoadError(error.message);}).finally(()=>{if(!cancelled)setLoaded(true);});return()=>{cancelled=true;};},[params.id]);
+  useEffect(()=>{
+    let cancelled=false;
+    loadIngredients().then(records=>{if(!cancelled)setIngredientOptions(current=>[...new Map([...current,...records.map(record=>record.name)].filter(name=>name.trim()).map(name=>[normalizeText(name),name])).values()]);})
+      .catch(()=>{if(!cancelled)toast.error("No se pudo cargar el catálogo de ingredientes. Puedes añadirlos por nombre mientras lo intentas de nuevo.");});
+    return()=>{cancelled=true;};
+  },[]);
   const complete=useMemo(()=>recipe?sectionState(recipe):null,[recipe]);const completed=complete?Object.values(complete).filter(Boolean).length:0;const percentage=Math.round(completed/6*100);
   const mandatoryComplete=!!(complete?.general&&complete.ingredients&&complete.preparation&&complete.source);
   const unsaved=!!recipe&&JSON.stringify(recipe)!==lastSaved;
-  useEffect(()=>{if(!loaded||!recipe||JSON.stringify(recipe)===lastSaved)return;let current=true;const timer=window.setTimeout(async()=>{setSaving(true);try{await upsertRecipe({...recipe,completeness:percentage});if(current){setLastSaved(JSON.stringify(recipe));setSaveError("");}}catch(error){if(current)setSaveError(error instanceof Error?error.message:"No se pudo guardar.");}finally{if(current)setSaving(false);}},600);return()=>{current=false;window.clearTimeout(timer);};},[recipe,percentage,loaded,lastSaved]);
+  useEffect(()=>{if(!canEdit||!loaded||!recipe||JSON.stringify(recipe)===lastSaved)return;let current=true;const timer=window.setTimeout(async()=>{setSaving(true);try{await upsertRecipe({...recipe,completeness:percentage});if(current){setLastSaved(JSON.stringify(recipe));setSaveError("");}}catch(error){if(current)setSaveError(error instanceof Error?error.message:"No se pudo guardar.");}finally{if(current)setSaving(false);}},600);return()=>{current=false;window.clearTimeout(timer);};},[recipe,percentage,loaded,lastSaved,canEdit]);
   useEffect(()=>{if(!unsaved)return;const warn=(event:BeforeUnloadEvent)=>{event.preventDefault();event.returnValue="";};window.addEventListener("beforeunload",warn);return()=>window.removeEventListener("beforeunload",warn);},[unsaved]);
-  const update=<K extends keyof RecipeRecord>(key:K,value:RecipeRecord[K])=>setRecipe(current=>current?{...current,[key]:value}:current);
+  const update=<K extends keyof RecipeRecord>(key:K,value:RecipeRecord[K])=>{if(canEdit)setRecipe(current=>current?{...current,[key]:value}:current);};
   const returnToList=()=>{if(unsaved){toast.info("Espera un momento mientras se guardan tus cambios.");return;}router.push("/recetas");};
-  const save=async(review=false)=>{if(!recipe)return;setSaving(true);const next={...recipe,completeness:percentage,status:review?"in-review" as const:recipe.status};try{await upsertRecipe(next);setRecipe(next);setLastSaved(JSON.stringify(next));setSaveError("");toast.success(review?"Receta en revisión":"Ficha guardada");}catch(error){setSaveError(error instanceof Error?error.message:"No se pudo guardar.");}finally{setSaving(false);}};
-  const createIngredient=()=>{const name=ingredientName.trim();if(!name||!recipe)return;const existing=ingredientOptions.find(item=>normalizeText(item)===normalizeText(name));const finalName=existing??name;if(!existing)setIngredientOptions(items=>[...items,name]);if(!recipe.ingredients.includes(finalName))update("ingredients",[...recipe.ingredients,finalName]);setIngredientName("");setCreatingIngredient(false);};
-  const addFiles=async(files:FileList|File[]|null)=>{if(!files)return;setReadingFiles(true);const photos:RecipeMedia[]=[];const audio:RecipeMedia[]=[];
+  const save=async(review=false)=>{if(!recipe||!canEdit)return;setSaving(true);const next={...recipe,completeness:percentage,status:review?"in-review" as const:recipe.status};try{await upsertRecipe(next);setRecipe(next);setLastSaved(JSON.stringify(next));setSaveError("");toast.success(review?"Receta en revisión":"Ficha guardada");}catch(error){setSaveError(error instanceof Error?error.message:"No se pudo guardar.");}finally{setSaving(false);}};
+  const createIngredient=()=>{const name=ingredientName.trim();if(!canEdit||!name||!recipe)return;const existing=ingredientOptions.find(item=>normalizeText(item)===normalizeText(name));const finalName=existing??name;if(!existing)setIngredientOptions(items=>[...items,name]);if(!recipe.ingredients.some(item=>normalizeText(item)===normalizeText(finalName)))update("ingredients",[...recipe.ingredients,finalName]);setIngredientName("");setCreatingIngredient(false);};
+  const addFiles=async(files:FileList|File[]|null)=>{if(!files||!canEdit)return;setReadingFiles(true);const photos:RecipeMedia[]=[];const audio:RecipeMedia[]=[];
     for(const file of Array.from(files)){const isPhoto=["image/jpeg","image/png","image/webp"].includes(file.type);const isAudio=["audio/mpeg","audio/mp4","audio/x-m4a","audio/wav","audio/x-wav"].includes(file.type);if((!isPhoto&&!isAudio)||file.size>(isPhoto?8:20)*1024*1024){toast.error(`${file.name}: formato no admitido o tamaño excesivo.`);continue;}
       try{const url=await new Promise<string>((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result as string);reader.onerror=()=>reject(new Error("No se pudo leer el archivo."));reader.readAsDataURL(file);});const item={id:crypto.randomUUID(),name:file.name,url,caption:"",type:file.type,size:file.size};(isPhoto?photos:audio).push(item);}catch{toast.error(`No se pudo leer ${file.name}.`);}}
     setRecipe(current=>current?{...current,photos:[...current.photos,...photos],audio:[...current.audio,...audio]}:current);setReadingFiles(false);
@@ -54,7 +64,9 @@ export function RecipeEditor(){
   const currentIndex=sections.findIndex(item=>item.id===active);const current=sections[currentIndex];
   return <div className="acervo-page min-h-screen text-[#173257]"><ObservatorySidebar activeItem="Recetas"/><main className="admin-main"><div className="mx-auto max-w-[1360px]">
     {!loaded?<p className="p-12 text-center text-sm text-[#8190a4]" role="status">Cargando ficha…</p>:loadError||!recipe?<div className="acervo-card p-8"><h1 className="text-xl font-semibold">{loadError||"No encontramos esta receta"}</h1><button onClick={()=>router.push("/recetas")} className="acervo-primary mt-5"><ArrowLeft className="size-4"/>Volver a Recetas</button></div>:<>
-      <header className="acervo-heading"><div className="flex min-w-0 items-start gap-3"><button onClick={returnToList} aria-label="Volver a Recetas" className="acervo-secondary mt-0.5 size-9 shrink-0 p-0"><ArrowLeft className="size-4"/></button><div className="min-w-0"><p className="mb-1 text-[10px] text-[#8a97a9]">Acervo / Recetas / Ficha</p><h1 className="break-words">{recipe.name||"Receta sin nombre"}</h1><p className="flex flex-wrap items-center gap-x-3 gap-y-1"><span className={`recipe-status status-${recipe.status}`}>{recipeStatusLabels[recipe.status]}</span><span>{recipe.municipality}</span><span className="inline-flex items-center gap-1" role="status"><Check className="size-3"/>{saveError?"Cambios sin guardar":saving||unsaved?"Guardando…":"Guardado"}</span></p></div></div><div className="flex flex-wrap items-center gap-2"><button disabled={saving||readingFiles} onClick={()=>save()} className="acervo-secondary"><Save className="size-3.5"/>Guardar</button><button disabled={!mandatoryComplete||saving||unsaved||readingFiles||recipe.status==="in-review"} onClick={()=>save(true)} title={!mandatoryComplete?"Completa datos generales, ingredientes, preparación y fuentes.":"Enviar a revisión"} className="acervo-primary"><Send className="size-3.5"/>{recipe.status==="in-review"?"En revisión":"Enviar a revisión"}</button></div></header>
+      <header className="acervo-heading"><div className="flex min-w-0 items-start gap-3"><button onClick={returnToList} aria-label="Volver a Recetas" className="acervo-secondary mt-0.5 size-9 shrink-0 p-0"><ArrowLeft className="size-4"/></button><div className="min-w-0"><p className="mb-1 text-[10px] text-[#8a97a9]">Acervo / Recetas / Ficha</p><h1 className="break-words">{recipe.name||"Receta sin nombre"}</h1><p className="flex flex-wrap items-center gap-x-3 gap-y-1"><span className={`recipe-status status-${recipe.status}`}>{recipeStatusLabels[recipe.status]}</span><span>{recipe.municipality}</span><span className="inline-flex items-center gap-1" role="status"><Check className="size-3"/>{saveError?"Cambios sin guardar":saving||unsaved?"Guardando…":"Guardado"}</span></p></div></div><div className="flex flex-wrap items-center gap-2">{canEdit&&<><button disabled={saving||readingFiles} onClick={()=>save()} className="acervo-secondary"><Save className="size-3.5"/>Guardar</button><button disabled={!mandatoryComplete||saving||unsaved||readingFiles||recipe.status==="in-review"} onClick={()=>save(true)} title={!mandatoryComplete?"Completa datos generales, ingredientes, preparación y fuentes.":"Enviar a revisión"} className="acervo-primary"><Send className="size-3.5"/>{recipe.status==="in-review"?"En revisión":"Enviar a revisión"}</button></>}</div></header>
+      <RecipePublicationControls key={recipe.id} id={recipe.id} disabled={saving||unsaved||readingFiles}/>
+      {!canEdit&&<p className="mt-3 text-xs text-[#8190a4]">Revisión de la ficha. Puedes consultar sus secciones y publicar la versión aprobada.</p>}
       {saveError&&<div className="mt-5 rounded-xl border border-red-100 bg-red-50 p-4 text-xs text-red-700" role="alert">{saveError} <button onClick={()=>save()} className="underline">Reintentar</button></div>}
       <div className="recipe-workspace mt-6">
         <aside className="recipe-sidebar" aria-label="Progreso y secciones de la ficha">
@@ -66,7 +78,7 @@ export function RecipeEditor(){
         </aside>
         <section id="recipe-form-panel" className={`recipe-form-card recipe-editor-panel ${active==="general"?"recipe-general-panel":""}`} aria-labelledby="recipe-section-title">
           <div className="recipe-panel-header"><div className="flex min-w-0 items-start gap-3"><current.icon className="mt-0.5 size-5 shrink-0 text-[#1684a5]" strokeWidth={1.7}/><div><h2 id="recipe-section-title" className="text-[20px] font-semibold tracking-tight">{current.label}</h2><p className="mt-1.5 text-[11px] leading-relaxed text-[#8190a4]">Sección {currentIndex+1} de 6 · {current.description}</p></div></div><span className="recipe-required-label">{active==="temporality"||active==="media"?"Sección opcional":"* Campos obligatorios"}</span></div>
-          <div className="recipe-panel-fields">
+          <fieldset disabled={!canEdit} className="recipe-panel-fields min-w-0 border-0">
       {active==="general"&&<GeneralSection recipe={recipe} update={update}/>}
       {active==="ingredients"&&<div className="recipe-ingredients-layout">
         <section className="ingredient-block" aria-labelledby="ingredients-block-title">
@@ -86,8 +98,8 @@ export function RecipeEditor(){
       {active==="temporality"&&<TemporalitySection recipe={recipe} update={update}/>}
       {active==="source"&&<SourceSection recipe={recipe} update={update}/>}
       {active==="media"&&<MediaSection recipe={recipe} update={update} addFiles={addFiles} busy={readingFiles}/>}
-          </div>
-          <footer className="recipe-panel-footer"><button className="acervo-secondary" onClick={returnToList}><ArrowLeft className="size-3.5"/>Volver a Recetas</button><div className="flex items-center gap-2"><button className="acervo-secondary" disabled={currentIndex===0} onClick={()=>selectSection(sections[currentIndex-1].id)}>Anterior</button>{currentIndex<sections.length-1?<button className="acervo-primary" onClick={()=>selectSection(sections[currentIndex+1].id)}>Siguiente<ArrowRight className="size-3.5"/></button>:<button className="acervo-primary" onClick={()=>save()} disabled={saving||readingFiles}><Save className="size-3.5"/>Guardar ficha</button>}</div></footer>
+          </fieldset>
+          <footer className="recipe-panel-footer"><button className="acervo-secondary" onClick={returnToList}><ArrowLeft className="size-3.5"/>Volver a Recetas</button><div className="flex items-center gap-2"><button className="acervo-secondary" disabled={currentIndex===0} onClick={()=>selectSection(sections[currentIndex-1].id)}>Anterior</button>{currentIndex<sections.length-1?<button className="acervo-primary" onClick={()=>selectSection(sections[currentIndex+1].id)}>Siguiente<ArrowRight className="size-3.5"/></button>:canEdit?<button className="acervo-primary" onClick={()=>save()} disabled={saving||readingFiles}><Save className="size-3.5"/>Guardar ficha</button>:null}</div></footer>
         </section>
       </div>
     </>}
@@ -96,7 +108,7 @@ export function RecipeEditor(){
 
 type Update=<K extends keyof RecipeRecord>(key:K,value:RecipeRecord[K])=>void;
 function Field({label,hint,htmlFor,children}:{label:string;hint?:string;htmlFor?:string;children:React.ReactNode}){return <div><div className="mb-2.5 flex flex-wrap items-center justify-between gap-2"><Label htmlFor={htmlFor} className="text-[12px] font-medium text-[#52647d]">{label}</Label>{hint&&<span className="text-[10px] text-[#8a97a9]">{hint}</span>}</div>{children}</div>;}
-function SimpleSelect({id,value,options,placeholder,onChange}:{id?:string;value:string;options:string[];placeholder:string;onChange:(value:string)=>void}){return <Select value={value||undefined} onValueChange={onChange}><SelectTrigger id={id} aria-label={placeholder} className="h-11 w-full rounded-xl border-[#e5eaf0] bg-[#f8fafc] text-xs shadow-none"><SelectValue placeholder={placeholder}/></SelectTrigger><SelectContent>{options.map(option=><SelectItem key={option} value={option}>{option}</SelectItem>)}</SelectContent></Select>;}
+function SimpleSelect({id,value,options,placeholder,onChange}:{id?:string;value:string;options:string[];placeholder:string;onChange:(value:string)=>void}){const user=useSessionUser();const disabled=user?.role!=="administrador"&&user?.role!=="capturista";return <Select disabled={disabled} value={value||undefined} onValueChange={onChange}><SelectTrigger id={id} aria-label={placeholder} className="h-11 w-full rounded-xl border-[#e5eaf0] bg-[#f8fafc] text-xs shadow-none"><SelectValue placeholder={placeholder}/></SelectTrigger><SelectContent>{options.map(option=><SelectItem key={option} value={option}>{option}</SelectItem>)}</SelectContent></Select>;}
 function GeneralSection({recipe,update}:{recipe:RecipeRecord;update:Update}){
   const duplicates=readRecipes().filter(item=>item.id!==recipe.id&&normalizeText(item.name)===normalizeText(recipe.name));
   return <div className="general-data-form">
@@ -155,6 +167,7 @@ function SourceSection({recipe,update}:{recipe:RecipeRecord;update:Update}) {
         <Field label="Nombre del informante" htmlFor="informant-name"><Input id="informant-name" value={recipe.informant.name} onChange={event=>update("informant",{...recipe.informant,name:event.target.value})} placeholder="Nombre completo" className="acervo-input h-11 bg-white"/></Field>
         <Field label="Rol" htmlFor="informant-role"><SimpleSelect id="informant-role" value={recipe.informant.role} options={informantRoles} placeholder="Seleccionar rol" onChange={value=>update("informant",{...recipe.informant,role:value})}/></Field>
         <Field label="Fecha de la entrevista" htmlFor="interview-date"><Input id="interview-date" type="date" value={recipe.informant.interviewDate} onChange={event=>update("informant",{...recipe.informant,interviewDate:event.target.value})} className="acervo-input h-11 bg-white"/></Field>
+        <div className="sm:col-span-2"><Field label="Referencia pública de la entrevista" hint="Necesaria para publicar" htmlFor="interview-public-reference"><Textarea id="interview-public-reference" value={recipe.sourceReference} onChange={event=>update("sourceReference",event.target.value)} placeholder="Referencia del archivo o proyecto, fecha y lugar de consulta." className="acervo-input min-h-24 bg-white"/></Field><p className="mt-2 text-[10px] leading-relaxed text-[#8190a4]">Esta referencia se mostrará a los usuarios. Los datos del informante permanecen en la ficha de trabajo.</p></div>
       </div>
     </div>:<>
       <Field label="Referencia" htmlFor="recipe-reference"><Textarea id="recipe-reference" value={recipe.sourceReference} onChange={event=>update("sourceReference",event.target.value)} rows={3} placeholder={referencePlaceholders[recipe.source]??"Describe el documento o la publicación consultada."} className="acervo-input min-h-24"/></Field>

@@ -5,7 +5,7 @@ La base de la integración es el ZIP `observador-gastronomico-main.zip` aportado
 ## Correspondencias
 
 - El panel de resumen, recetas, ingredientes, cocineras, podcast, recetarios PDF y cuentas proceden de la entrega nueva.
-- Mercados, instrumentos legales, red de conocimiento, búsqueda general y contenido institucional se adaptan desde los módulos anteriores. Sus enlaces de navegación abren las rutas concretas, no anclas del resumen.
+- La red de conocimiento, el mapa, la memoria histórica y el contenido institucional se adaptan desde los módulos anteriores. La vista pública de mercados queda en espera; Protección legal mantiene solo el apartado reservado. Acervo vuelve a sus cinco opciones originales. Los módulos históricos de captura se conservan detrás de sesión.
 - La línea de tiempo conserva épocas, hitos, búsqueda, enlaces e historial, adaptados al router Next.js.
 - La capa de datos de compatibilidad resuelve recetas, cocineras e ingredientes contra los catálogos del autor. Los datos propios de mercados y las fichas históricas conservan sus almacenes anteriores.
 - Las URLs antiguas de captura de recetas/cocineras ya no montan sus editores de la versión Vite. Se utilizan los formularios de la entrega nueva. La captura de mercados mantiene su módulo específico.
@@ -24,10 +24,21 @@ La pantalla de registros anteriores conserva la posibilidad de descargar la info
 
 ## Alcance del acceso
 
-El panel adopta las sesiones y controles de la entrega nueva: es necesario iniciar sesión para entrar a sus secciones. Los controles de acceso de PostgreSQL y de sus APIs no se sustituyen por roles guardados en el navegador. Los formularios locales de los módulos del autor conservan su alcance de demostración; no equivalen a publicaciones del flujo editorial de la base.
+La página abre sin sesión para consulta pública. Las herramientas de captura y administración exigen las sesiones de la entrega nueva; los controles reales no dependen de roles guardados en el navegador. Recetas, ingredientes, cocineras y podcast guardan sus formularios en PostgreSQL. Publicar requiere administración o revisión y crea una versión pública separada; los borradores no se exponen. Las publicaciones originales aprobadas de ogp tienen prioridad sobre copias del panel. La migración 008 conserva la línea de tiempo editorial en la BD y permite publicarla junto al catálogo.
 
 SHA-256 de la entrega recibida: `e9a71922b2f889b9eee0605d3b94b7479717efe6a3de53f8bf33e4744e704869`.
 
 ## Archivo del recetario no incluido
 
 El ZIP recibido no contiene archivos PDF, aunque su catálogo referencia `cocina-dig-2.pdf`. Se conserva el lector del autor, pero la página comprueba los archivos disponibles antes de montarlo. Sin el adjunto se muestra la referencia como pendiente; la API devuelve una ausencia explícita y no un fallo de servicio. El archivo real puede incorporarse a `assets/recetarios/cocina-dig-2.pdf` para habilitar el lector. No se sustituyó por contenido ficticio.
+
+## Navegación y lectura pública
+
+- Acervo: Recetas, Recetario, Ingredientes, Mercados y tianguis, Cocineras y cocineros.
+- Datos y análisis: Reportes y Red de conocimiento.
+- Conocer el observatorio: Memoria histórica y Acerca del Observatorio.
+- Podcast: capítulos publicados, sin controles de captura para visitantes.
+
+El endpoint de consulta `/api/public/catalog` devuelve proyecciones explícitas de campos públicos. Las fuentes originales se consultan mediante `ogp.v_fichas_publicas`; las nuevas capturas del panel usan snapshots aprobados en `demo.public_catalog_versions`. Se omiten contactos, informantes, documentos privados y relaciones a borradores. Las imágenes originalmente aprobadas de la BD conservan su visibilidad; las capturas del panel publican por ahora su información textual y mantienen adjuntos privados.
+
+El resumen y los reportes públicos calculan cifras a partir de esas publicaciones. El resumen administrativo original conserva sus datos ilustrativos. Los antiguos archivos localStorage/IndexedDB no se convierten automáticamente en publicaciones y permanecen disponibles para respaldo e importación explícita desde el menú del equipo.

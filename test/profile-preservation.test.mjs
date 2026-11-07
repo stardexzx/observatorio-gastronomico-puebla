@@ -13,10 +13,13 @@ const cookUrl = moduleUrl(await readFile(new URL('../data/cooks.ts', import.meta
 const ingredientUrl = moduleUrl(await readFile(new URL('../data/ingredients.ts', import.meta.url), 'utf8'));
 const { normalizeCook, createBlankCook } = await import(cookUrl);
 const { normalizeIngredient } = await import(ingredientUrl);
-const cookStorage = await import(moduleUrl((await readFile(new URL('../data/cook-storage.ts', import.meta.url), 'utf8')).replace('"@/data/cooks"', JSON.stringify(cookUrl))));
-const ingredientStorage = await import(moduleUrl((await readFile(new URL('../data/ingredient-storage.ts', import.meta.url), 'utf8')).replace('"@/data/ingredients"', JSON.stringify(ingredientUrl))));
+const transportUrl=moduleUrl(await readFile(new URL('../data/catalog-storage.ts',import.meta.url),'utf8'));
+const cookStorage = await import(moduleUrl((await readFile(new URL('../data/cook-storage.ts', import.meta.url), 'utf8')).replace('"@/data/cooks"', JSON.stringify(cookUrl)).replace('"./catalog-storage"',JSON.stringify(transportUrl))));
+const ingredientStorage = await import(moduleUrl((await readFile(new URL('../data/ingredient-storage.ts', import.meta.url), 'utf8')).replace('"@/data/ingredients"', JSON.stringify(ingredientUrl)).replace('"./catalog-storage"',JSON.stringify(transportUrl))));
 const originalWindow = globalThis.window;
+const originalFetch=globalThis.fetch;
 after(() => {
+  globalThis.fetch=originalFetch;
   if (originalWindow === undefined) delete globalThis.window;
   else globalThis.window = originalWindow;
 });
@@ -67,38 +70,54 @@ test('optional profile fields tolerate malformed imported values without inventi
   assert.equal(normalizeCook({ studentCount: Number.NaN }).studentCount, 0);
 });
 
-test('cook storage preserves the complete memory profile and persistent media after rereading', () => {
-  memoryStorage();
-  cookStorage.writeCooks([normalizeCook(profile)]);
-  assert.deepEqual(cookStorage.findCook(profile.id), normalizeCook(profile));
-  cookStorage.upsertCook(normalizeCook({ ...profile, quote: 'Frase actualizada' }));
-  const records = cookStorage.readCooks();
-  assert.equal(records.length, 1);
-  assert.equal(records[0].quote, 'Frase actualizada');
-  assert.equal(records[0].photos[0].url, profile.photos[0].url);
-  assert.equal(records[0].oralHistories[0].url, profile.oralHistories[0].url);
+function catalogServer(){
+  const database={cooks:new Map(),ingredients:new Map()};
+  let failure="";
+  globalThis.fetch=async(path,options={})=>{
+    const [, , ,kind,id]=String(path).split("/");
+    if(failure)return Response.json({error:failure},{status:503});
+    const records=database[kind];
+    if(options.method==="GET")return Response.json({records:[...records.values()]});
+    const record=JSON.parse(options.body);
+    records.set(id||record.id,structuredClone(record));
+    return Response.json({record});
+  };
+  return {database,fail:message=>{failure=message}};
+}
+
+test('database capture preserves memory fields and media across loading and editing',async()=>{
+  const server=catalogServer();
+  await cookStorage.loadCooks();
+  assert.deepEqual(cookStorage.readCooks(),[]);
+  await cookStorage.writeCooks([normalizeCook(profile)]);
+  assert.deepEqual(await cookStorage.findCook(profile.id),normalizeCook(profile));
+  await cookStorage.upsertCook(normalizeCook({...profile,quote:'Frase actualizada'}));
+  const records=await cookStorage.loadCooks();
+  assert.equal(records.length,1);
+  assert.equal(records[0].quote,'Frase actualizada');
+  assert.equal(records[0].photos[0].url,profile.photos[0].url);
+  assert.equal(records[0].oralHistories[0].url,profile.oralHistories[0].url);
+  assert.equal(server.database.cooks.size,1);
 });
 
-for (const [label, storage, key, read, write, upsert, normalize] of [
-  ['cook', cookStorage, 'cookStorageKey', 'readCooks', 'writeCooks', 'upsertCook', normalizeCook],
-  ['ingredient', ingredientStorage, 'ingredientStorageKey', 'readIngredients', 'writeIngredients', 'upsertIngredient', normalizeIngredient],
-]) {
-  test(`${label} storage reports malformed data without erasing or replacing it`, () => {
-    const values = memoryStorage();
-    const raw = '{registro incompleto';
-    values.set(storage[key], raw);
-    assert.throws(() => storage[read](), /datos originales se conservaron/i);
-    assert.throws(() => storage[upsert](normalize({ id: 'new' })), /datos originales se conservaron/i);
-    assert.equal(values.get(storage[key]), raw);
-    values.set(storage[key], '{}');
-    assert.throws(() => storage[read](), /datos originales se conservaron/i);
-  });
-  test(`${label} storage reports quota and access errors instead of returning a saved result`, () => {
-    memoryStorage();
-    window.localStorage.setItem = () => { throw new DOMException('Storage is full', 'QuotaExceededError'); };
-    assert.throws(() => storage[write]([normalize({ id: 'saved' })]), /no se pudo guardar/i);
-    assert.throws(() => storage[upsert](normalize({ id: 'saved' })), /no se pudo guardar/i);
-    window.localStorage.getItem = () => { throw new DOMException('Storage blocked', 'SecurityError'); };
-    assert.throws(() => storage[read](), /no se puede acceder/i);
-  });
+for(const [label,storage,key,read,load,upsert,normalize] of [
+ ['cook',cookStorage,'cookStorageKey','readCooks','loadCooks','upsertCook',normalizeCook],
+ ['ingredient',ingredientStorage,'ingredientStorageKey','readIngredients','loadIngredients','upsertIngredient',normalizeIngredient],
+]){
+ test(`${label} capture does not seed database or overwrite previous browser archives`,async()=>{
+   const values=memoryStorage(),raw='{registro incompleto';values.set(storage[key],raw);
+   const server=catalogServer();
+   await storage[load]();assert.deepEqual(storage[read](),[]);
+   assert.equal(values.get(storage[key]),raw);
+   assert.equal(server.database[label==='cook'?'cooks':'ingredients'].size,0);
+ });
+ test(`${label} capture reports server failures and keeps last saved records`,async()=>{
+   const server=catalogServer();await storage[load]();
+   await storage[upsert](normalize({id:'saved',name:'Nombre documentado'}));
+   const before=structuredClone(storage[read]());server.fail('No se pudo guardar en la base de datos');
+   await assert.rejects(storage[upsert](normalize({id:'saved',name:'Cambio no guardado'})),/base de datos/);
+   assert.deepEqual(storage[read](),before);
+   await assert.rejects(storage[load](),/base de datos/);
+   assert.deepEqual(storage[read](),before);
+ });
 }

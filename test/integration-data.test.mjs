@@ -33,6 +33,10 @@ test('author identity and fields win; legacy relations resolve by name without n
   assert.deepEqual(unified.mercados[0].ingredientIds, ['ING-101']);
   assert.ok(unified.mercados[0].prod.includes('Producto conservado como texto'));
   assert.equal(unified.recetas[0].to, '/recetas/550e8400-e29b-41d4-a716-446655440000');
+  for (const kind of ['recetas','cocineras','ingredientes']) {
+    assert.equal(unified[kind][0].storage,'postgres');
+    assert.equal(unified[kind][0].source,'database');
+  }
   const emptied = buildUnifiedCatalogs(legacy(), authorCatalogs([], [], []));
   assert.equal(emptied.recetas.length, 0);
   assert.deepEqual(emptied.mercados[0].recipeIds, []);
@@ -116,29 +120,52 @@ test('browsers without database enumeration abort an attempted creation without 
   finally { delete globalThis.indexedDB; }
 });
 
-test('market ingredient capture selects the author duplicate or persists a new draft with a canonical usable ID', async () => {
-  const values = new Map();
-  globalThis.window = { localStorage: { getItem: (key) => values.get(key) ?? null, setItem: (key, value) => values.set(key, value) } };
+test('market capture selects the database duplicate or persists a new draft with the server canonical ID', async () => {
+  const values=new Map([['observatorio-ingredients-v1','{archivo anterior intacto']]);
+  const previousWindow=globalThis.window,previousFetch=globalThis.fetch;
+  globalThis.window={localStorage:{getItem:key=>values.get(key)??null,setItem:(key,value)=>values.set(key,value)}};
+  const stored=new Map([['ING-existing',{id:'ING-existing',name:'Chile poblano',description:'Descripción ya documentada',status:'verified'}]]);
+  let writes=0,failWrites=false;
+  globalThis.fetch=async(path,options={})=>{
+    assert.equal(path,'/api/catalogs/ingredients');
+    assert.equal(options.cache,'no-store');
+    if(options.method==='GET')return Response.json({records:[...stored.values()]});
+    assert.equal(options.method,'POST');
+    assert.equal(options.headers['Content-Type'],'application/json');
+    if(failWrites)return Response.json({error:'No se pudo guardar el ingrediente en la base de datos.'},{status:503});
+    const record=JSON.parse(options.body);
+    assert.equal(record.status,'draft');
+    // IDs from the service are canonical, even if the client proposed another one.
+    record.id=`ING-database-${++writes}`;
+    stored.set(record.id,structuredClone(record));
+    return Response.json({record},{status:201});
+  };
   try {
-    const duplicate = await ensureAuthorIngredient({ name: '  CHÍLE POBLANO ', description: 'Do not overwrite the author' });
-    assert.equal(duplicate.id, 'ING-001');
-    assert.notEqual(duplicate.description, 'Do not overwrite the author');
-    assert.equal(values.size, 0);
-    const created = await ensureAuthorIngredient({ name: ' Producto documentado ', description: ' Descripción proporcionada ' });
-    assert.equal(created.status, 'draft');
-    assert.equal(created.municipalityCode, '');
-    assert.equal(created.name, 'Producto documentado');
-    assert.equal(created.description, 'Descripción proporcionada');
-    const stored = JSON.parse(values.get('observatorio-ingredients-v1'));
-    assert.equal(stored.find((r) => r.id === created.id)?.name, created.name);
-    const again = await ensureAuthorIngredient({ name: 'producto documentado', description: 'Another description' });
-    assert.equal(again.id, created.id);
-    assert.equal(JSON.parse(values.get('observatorio-ingredients-v1')).length, stored.length);
-    const unified = buildUnifiedCatalogs({ mercados: [{ id: 'm1', n: 'Mercado', resource: 'mercados', ingredientIds: [created.id] }] }, authorCatalogs([], [], stored));
-    assert.deepEqual(unified.mercados[0].ingredientIds, [created.id]);
+    const duplicate=await ensureAuthorIngredient({name:'  CHÍLE POBLANO ',description:'Do not overwrite the author'});
+    assert.equal(duplicate.id,'ING-existing');
+    assert.equal(duplicate.description,'Descripción ya documentada');
+    assert.equal(writes,0);
+    const created=await ensureAuthorIngredient({name:' Producto documentado ',description:' Descripción proporcionada '});
+    assert.equal(created.id,'ING-database-1');
+    assert.equal(created.status,'draft');
+    assert.equal(created.municipalityCode,'');
+    assert.equal(created.municipality,'');
+    assert.equal(created.name,'Producto documentado');
+    assert.equal(created.description,'Descripción proporcionada');
+    assert.equal(stored.get(created.id).name,created.name);
+    const again=await ensureAuthorIngredient({name:'producto documentado',description:'Another description'});
+    assert.equal(again.id,created.id);assert.equal(again.description,created.description);
+    assert.equal(writes,1);assert.equal(stored.size,2);
+    const unified=buildUnifiedCatalogs({mercados:[{id:'m1',n:'Mercado',resource:'mercados',ingredientIds:[created.id]}]},authorCatalogs([],[],[...stored.values()]));
+    assert.deepEqual(unified.mercados[0].ingredientIds,[created.id]);
     assert.ok(unified.mercados[0].prod.includes('Producto documentado'));
-    window.localStorage.setItem = () => { throw new Error('QuotaExceededError'); };
-    await assert.rejects(ensureAuthorIngredient({ name: 'Producto no guardado' }), /No se pudo guardar/);
-    assert.equal(JSON.parse(values.get('observatorio-ingredients-v1')).some((r) => r.name === 'Producto no guardado'), false);
-  } finally { delete globalThis.window; }
+    failWrites=true;
+    await assert.rejects(ensureAuthorIngredient({name:'Producto no guardado'}),/No se pudo guardar/);
+    assert.equal([...stored.values()].some(record=>record.name==='Producto no guardado'),false);
+    assert.equal(values.size,1);
+    assert.equal(values.get('observatorio-ingredients-v1'),'{archivo anterior intacto');
+  } finally {
+    globalThis.fetch=previousFetch;
+    if(previousWindow===undefined)delete globalThis.window;else globalThis.window=previousWindow;
+  }
 });

@@ -1,4 +1,4 @@
-"""Prueba funcional de la línea de tiempo; requiere Vite, Playwright y Chromium.
+"""Prueba pública de memoria histórica y mapa; requiere Next, PostgreSQL, Playwright y Chromium.
 Uso: python tests/timeline_browser.py http://127.0.0.1:5181
 """
 import sys
@@ -71,8 +71,8 @@ with sync_playwright() as p:
     expect(page.get_by_role('tab').first).to_have_attribute('aria-selected','true')
     page.screenshot(path='work/timeline-desktop.png',full_page=True)
     # La navegación principal apunta a la sección y la versión móvil no desborda.
-    page.get_by_role('button',name='Conocer el Observatorio',exact=True).click()
-    page.get_by_role('link',name=__import__('re').compile('Línea de tiempo')).click()
+    page.get_by_role('button',name='Conocer el observatorio',exact=True).click()
+    page.get_by_role('menuitem',name='Memoria histórica',exact=True).click()
     expect(page.locator('h1')).to_contain_text('Gastronomía poblana')
     for width in [768,390,320]:
         page.set_viewport_size({'width':width,'height':844})
@@ -90,7 +90,33 @@ with sync_playwright() as p:
     expect(page.locator('#tl-event-title')).to_contain_text('Moles y dulces')
     assert page.locator('.tl-milestones ol button.is-active').evaluate('(e)=>{const p=e.closest("ol").getBoundingClientRect(),r=e.getBoundingClientRect();return r.left>=p.left-1 && r.right<=p.right+1;}'),'El hito seleccionado queda fuera de la lista móvil'
     page.screenshot(path='work/timeline-mobile.png',full_page=True)
+    # El mapa conserva las geometrías y filtra el catálogo público mediante la URL.
+    page.set_viewport_size({'width':1440,'height':1000})
+    page.goto(base+'/mapa',wait_until='networkidle')
+    expect(page.get_by_role('heading',name='Mapa gastronómico de Puebla',exact=True)).to_be_visible()
+    expect(page.locator('.municipal-canvas path[role=button]')).to_have_count(217)
+    canvas=page.locator('.municipal-canvas > svg')
+    original_view=canvas.get_attribute('viewBox')
+    page.get_by_role('button',name='Acercar mapa',exact=True).click()
+    assert canvas.get_attribute('viewBox')!=original_view
+    page.get_by_role('button',name='Restablecer mapa',exact=True).click()
+    assert canvas.get_attribute('viewBox')==original_view
+    page.get_by_label('Municipio del mapa',exact=True).select_option('21114')
+    expect(page.locator('.public-map aside h2')).to_have_text('Puebla')
+    assert 'municipio=21114' in page.url
+    page.get_by_role('button',name='Quitar municipio',exact=True).click()
+    page.get_by_label('Buscar en el mapa',exact=True).fill('ZZZ-NO-EXISTE')
+    page.locator('.public-map').get_by_role('button',name='Buscar',exact=True).click()
+    expect(page.locator('.public-map aside')).to_contain_text('No hay registros publicados para estos filtros.')
+    page.get_by_role('button',name='Limpiar filtros',exact=True).click()
+    expect(page).to_have_url(base+'/mapa')
+    page.get_by_role('button',name='Recetas',exact=True).click()
+    expect(page.get_by_role('button',name='Recetas',exact=True)).to_have_attribute('aria-pressed','false')
+    for width in [390,320]:
+        page.set_viewport_size({'width':width,'height':844})
+        assert page.evaluate('document.documentElement.scrollWidth <= innerWidth'),f'Mapa desborda a {width}px'
+    page.screenshot(path='work/public-map-mobile.png',full_page=True)
     assert not errors,errors
-    assert not requests,requests
+    assert requests and all('/api/public/catalog' in url for url in requests),requests
     context.close();browser.close()
-    print('Línea de tiempo: 5 épocas, 12 hitos, teclado, búsqueda, enlaces, historial y móvil correctos; sin consultas a la API.')
+    print('Memoria histórica: 5 épocas, 12 hitos, teclado, búsqueda, enlaces e historial. Mapa: 217 municipios, filtros, URL, zoom y móvil. Solo consultas al catálogo público.')

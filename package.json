@@ -24,7 +24,9 @@
     "auth:setup": "node --env-file=.env.local scripts/setup-login.mjs",
     "test": "node --test test/*.test.mjs",
     "test:legacy": "node --test tests/api.test.mjs tests/editor-validation.test.mjs",
-    "test:integration": "npm run build && node tests/unified_smoke.mjs --production"
+    "test:integration": "npm run build && node tests/public_smoke.mjs --production",
+    "test:integration:legacy": "npm run build && node tests/unified_smoke.mjs --production",
+    "test:public": "npm run build && node tests/public_smoke.mjs --production"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

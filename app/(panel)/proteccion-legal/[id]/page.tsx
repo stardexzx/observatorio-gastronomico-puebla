@@ -1,8 +1,10 @@
+import { requireSessionUser } from "@/lib/auth/session";
 import { Suspense } from "react";
 import { SectionShell } from "@/components/integration/section-shell";
 import DeclaratoriaDetalle from "@/src/legacy-pages/DeclaratoriaDetalle.jsx";
 
-export default function Page() {
+export default async function Page() {
+  await requireSessionUser();
   return <SectionShell activeItem="Protección legal" legacy>
     <Suspense fallback={<p role="status">Cargando sección…</p>}>
       <DeclaratoriaDetalle />

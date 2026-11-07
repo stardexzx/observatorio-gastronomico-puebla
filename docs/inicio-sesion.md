@@ -4,9 +4,9 @@ Correo y contraseña son los únicos campos del acceso habitual en `/iniciar-ses
 
 ## Rutas e identidad
 
-Las páginas del panel se agrupan en `app/(panel)` sin cambiar sus URLs. Su layout exige una sesión válida. La sección Administración exige además Administrador. Las APIs de recetas devuelven 401 sin sesión y comprueban permisos para escritura; el Revisor no dispone de captura. El actor de creación/edición/archivo se deriva de la sesión, sustituyendo el actor fijo anterior en auditoría. El administrador puede trabajar en las recetas existentes mediante asignación explícita de captura dentro de la transacción.
+Las páginas del panel se agrupan en `app/(panel)` sin cambiar sus URLs. Su layout permite visitantes sin sesión para mostrar las vistas públicas de lectura. Las páginas de administración y captura conservadas exigen sesión; en los catálogos, la página elige la versión pública o administrativa según la sesión. La sección Administración exige además Administrador. Las APIs de recetas devuelven 401 sin sesión y comprueban permisos para escritura; el Revisor no dispone de captura. El actor de creación/edición/archivo se deriva de la sesión, sustituyendo el actor fijo anterior en auditoría. El administrador puede trabajar en las recetas existentes mediante asignación explícita de captura dentro de la transacción.
 
-El menú de perfil muestra nombre, correo y rol de la persona autenticada. Roles y permisos se presenta únicamente al Administrador. Cerrar sesión elimina la sesión del servidor y la cookie. Las transiciones de autenticación recargan el documento para descartar estados y rutas del usuario anterior.
+El menú de perfil muestra nombre, correo y rol de la persona autenticada. Roles y permisos se presenta únicamente al Administrador. Cerrar sesión elimina la sesión del servidor y la cookie y devuelve al Resumen público. Las transiciones de autenticación recargan el documento para descartar estados y rutas del usuario anterior.
 
 ## Credenciales y sesiones
 
@@ -39,3 +39,7 @@ El acceso tiene formulario a la izquierda y fotografía del Zócalo de Puebla a 
 - Las pruebas antiguas `test/reconnected-recipes.mjs` y `test/demo-postgres.mjs` requieren ahora `TEST_SESSION_COOKIE` de una sesión autenticada. No hay excepciones de autenticación para las pruebas.
 
 Mantener el servidor restringido a loopback durante esta fase. El despliegue público deberá usar HTTPS y un dominio de origen definido, revisar recuperación de cuentas y límites globales de intentos, y migrar el catálogo administrativo de permisos según el modelo final de tres roles.
+
+## Lectura pública
+
+No se necesita cuenta para consultar el observatorio. «Acceso del equipo» abre el inicio de sesión de administrador, revisor o capturista. La vista pública no permite registrar ni editar contenido; usa únicamente el catálogo de publicaciones aprobadas. Capturista puede crear borradores; administrador y revisor pueden publicar o retirar las versiones públicas. Recetas mantiene una copia aprobada independiente mientras se edita el borrador.

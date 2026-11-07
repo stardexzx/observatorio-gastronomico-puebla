@@ -1,6 +1,6 @@
 import { loadRecipes } from "@/data/recipe-storage";
-import { readCooks } from "@/data/cook-storage";
-import { readIngredients } from "@/data/ingredient-storage";
+import { loadCooks } from "@/data/cook-storage";
+import { loadIngredients } from "@/data/ingredient-storage";
 import { recipeDataMode } from "@/data/recipe-data-mode";
 import { authorCatalogs } from "./records";
 
@@ -14,5 +14,6 @@ export function readLegacyMappings(): Record<string, string> {
   } catch { return {}; }
 }
 export async function loadAuthorCatalogs() {
-  return authorCatalogs(await loadRecipes(), readCooks(), readIngredients(), recipeDataMode);
+  const [recipes,cooks,ingredients]=await Promise.all([loadRecipes(),loadCooks(),loadIngredients()]);
+  return authorCatalogs(recipes,cooks,ingredients,recipeDataMode);
 }

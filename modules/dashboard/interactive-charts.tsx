@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Area, AreaChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { RotateCcw, Table2 } from "lucide-react";
 import { useDashboard } from "@/components/dashboard/dashboard-context";
-import { buildDashboardView, categoryLabels, type CategoryFilter } from "@/lib/dashboard-view";
+import { categoryLabels, type CategoryFilter } from "@/lib/dashboard-view";
 import styles from "./interactive-charts.module.css";
 export const chartCategories=[
  {key:'recetas',label:'Recetas',color:'#033AA5'},
@@ -16,8 +16,8 @@ type ChartKey=typeof chartCategories[number]['key'];
 const tooltipStyle={borderRadius:10,border:'1px solid #A9D2ED',fontSize:11,background:'#fff',boxShadow:'0 5px 20px #001B6210'};
 const format=(value:number)=>value.toLocaleString('es-MX');
 export function GrowthExplorer(){
- const {filters}=useDashboard();
- return <GrowthExplorerView key={filters.period}/>;
+ const {filters,view}=useDashboard();
+ return <GrowthExplorerView key={`${filters.period}:${view.growth.map(point=>point.month).join(",")}`}/>;
 }
 function GrowthExplorerView(){
  const {view,filters}=useDashboard();
@@ -38,9 +38,9 @@ function GrowthExplorerView(){
  </div>;
 }
 export function CompositionExplorer(){
- const {view,filters,setFilter}=useDashboard();
+ const {view,filters,setFilter,allDistribution}=useDashboard();
  // Keep the full breakdown as context while a category filters the rest of the panel.
- const distribution=buildDashboardView({...filters,category:'todas'}).distribution;
+ const distribution=allDistribution;
  const total=distribution.reduce((sum,item)=>sum+item.value,0);
  const selected=distribution.find(item=>item.key===filters.category);
  const choose=(key:ChartKey)=>setFilter('category',filters.category===key?'todas':key);

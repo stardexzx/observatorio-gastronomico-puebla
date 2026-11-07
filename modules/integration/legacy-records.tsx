@@ -51,12 +51,11 @@ export function LegacyRecords() {
           continue;
         }
         try {
-          const saved = row.kind === "recetas" ? await createRecipe(legacyRecipeDraft(row, archive)) : legacyCookDraft(row, archive);
-          if (row.kind === "cocineras") upsertCook(saved as ReturnType<typeof legacyCookDraft>);
+          const saved = row.kind === "recetas" ? await createRecipe(legacyRecipeDraft(row, archive)) : await upsertCook(legacyCookDraft(row, archive));
           mappings[row.key] = saved.id;
           window.localStorage.setItem(mappingStorageKey, JSON.stringify(mappings));
           current[row.kind] = [...(current[row.kind] || []), { id: saved.id, n: saved.name }];
-          outcomes.push({ key: row.key, name: row.name, text: row.kind === "recetas" ? "Importada como borrador en recetas." : "Importada como borrador en este navegador.", to: `/${row.kind}/${encodeURIComponent(saved.id)}` });
+          outcomes.push({ key: row.key, name: row.name, text: row.kind === "recetas" ? "Importada como borrador en recetas." : "Importada como borrador en el catálogo.", to: `/${row.kind}/${encodeURIComponent(saved.id)}` });
         } catch (e) {
           outcomes.push({ key: row.key, name: row.name, text: message(e) });
           // Stop after a failure so the user can inspect the completed records before retrying.
@@ -86,7 +85,7 @@ export function LegacyRecords() {
       </section>
       {archive.exists && <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5">
         <h2 className="text-lg font-semibold">Pasar fichas al catálogo actual</h2>
-        <p className="mt-2 text-sm leading-6 text-slate-600">Selecciona únicamente las fichas que deseas trasladar. Las recetas se guardan como borradores con tu sesión; las personas se guardan como borradores en este navegador. Las fuentes y los campos que falten quedan pendientes de completar. Los datos de muestra del demo anterior se excluyen.</p>
+        <p className="mt-2 text-sm leading-6 text-slate-600">Selecciona únicamente las fichas que deseas trasladar. Las recetas se guardan como borradores con tu sesión; las personas se guardan como borradores en el catálogo. Las fuentes y los campos que falten quedan pendientes de completar. Los datos de muestra del demo anterior se excluyen.</p>
         {catalogError && <p role="alert" className="mt-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">Puedes descargar el respaldo. Para comparar e importar, primero debe estar disponible el catálogo actual: {catalogError}</p>}
         {!author && !catalogError && <p className="mt-4 text-sm" role="status">Comparando con los catálogos actuales…</p>}
         {author && preview.length === 0 && <p className="mt-4 text-sm text-slate-600">No hay recetas ni personas capturadas por ti para trasladar. Los mercados, la protección legal y los borradores permanecen disponibles en el respaldo.</p>}

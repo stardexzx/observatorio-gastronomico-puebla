@@ -10,7 +10,7 @@ import {
 } from "@/data/dashboard";
 import { pueblaMunicipalities } from "@/data/puebla-municipalities";
 
-export type PeriodFilter = "2023-2024" | "2024" | "2023";
+export type PeriodFilter = string;
 export type MunicipalityFilter = string;
 export type CategoryFilter = "todas" | "recetas" | "ingredientes" | "mercados" | "cocineras" | "legal";
 
@@ -40,7 +40,7 @@ const periodSlice = <T extends {month:string},>(items: T[], period: PeriodFilter
 
 export function buildDashboardView(filters: DashboardFilters, search = "") {
   const geoFactor = municipalityFactor(filters.municipality);
-  const timeFactor = periodFactors[filters.period];
+  const timeFactor = periodFactors[filters.period] ?? 1;
   const categoryFactor = filters.category === "todas" ? 1 : categoryShares[filters.category];
   const recordFactor = geoFactor * timeFactor * categoryFactor;
   const categoryOnly = filters.category === "todas" ? null : filters.category;
