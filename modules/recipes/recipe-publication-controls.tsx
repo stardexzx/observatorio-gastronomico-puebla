@@ -5,12 +5,12 @@ import { Globe2, RefreshCw, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { useSessionUser } from "@/components/auth/session-provider";
 
-type Publication = { published: boolean; publishedAt: string | null };
+export type RecipePublicationState = { published: boolean; publishedAt: string | null };
 
-export function RecipePublicationControls({ id, disabled = false }: { id: string; disabled?: boolean }) {
+export function RecipePublicationControls({ id, disabled = false, onPublicationChange }: { id: string; disabled?: boolean; onPublicationChange?: (publication: RecipePublicationState) => void }) {
   const user = useSessionUser();
   const canPublish = user?.role === "administrador" || user?.role === "revisor";
-  const [publication, setPublication] = useState<Publication | null>(null);
+  const [publication, setPublication] = useState<RecipePublicationState | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -20,15 +20,20 @@ export function RecipePublicationControls({ id, disabled = false }: { id: string
     const controller = new AbortController();
     fetch(endpoint, { cache: "no-store", signal: controller.signal })
       .then(async response => {
-        const body = await response.json() as Partial<Publication> & { error?: string };
+        const body = await response.json() as Partial<RecipePublicationState> & { error?: string };
         if (!response.ok) throw new Error(body.error || "No se pudo consultar la publicación.");
         if (typeof body.published !== "boolean") throw new Error("No se pudo consultar la publicación.");
-        if (!controller.signal.aborted) { setPublication({ published: body.published, publishedAt: body.publishedAt ?? null }); setError(""); }
+        if (!controller.signal.aborted) {
+          const confirmed = { published: body.published, publishedAt: body.publishedAt ?? null };
+          setPublication(confirmed);
+          onPublicationChange?.(confirmed);
+          setError("");
+        }
       })
       .catch(error => { if (!controller.signal.aborted) setError(error instanceof Error ? error.message : "No se pudo consultar la publicación."); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [endpoint]);
+  }, [endpoint, onPublicationChange]);
 
   const changePublication = async (action: "publish" | "unpublish") => {
     if (!canPublish || busy || disabled) return;
@@ -37,10 +42,12 @@ export function RecipePublicationControls({ id, disabled = false }: { id: string
       const response = await fetch(endpoint, {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action }),
       });
-      const body = await response.json() as Partial<Publication> & { error?: string };
+      const body = await response.json() as Partial<RecipePublicationState> & { error?: string };
       if (!response.ok) throw new Error(body.error || "No se pudo cambiar la publicación.");
       if (typeof body.published !== "boolean") throw new Error("No se pudo confirmar la publicación. Vuelve a cargar la ficha.");
-      setPublication({ published: body.published, publishedAt: body.publishedAt ?? null });
+      const confirmed = { published: body.published, publishedAt: body.publishedAt ?? null };
+      setPublication(confirmed);
+      onPublicationChange?.(confirmed);
       toast.success(body.published ? "Receta publicada para los usuarios" : "Publicación retirada");
     } catch (error) {
       setError(error instanceof Error ? error.message : "No se pudo cambiar la publicación.");

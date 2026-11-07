@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable @next/next/no-img-element -- Previsualizaciones de archivos locales. */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, BookOpen, CalendarDays, Check, ChefHat, FileAudio, Globe2, ImagePlus, Info, ListOrdered, MapPin, Mic2, NotebookTabs, Plus, Save, ScrollText, Send, Trash2, UploadCloud, X } from "lucide-react";
 import { toast } from "sonner";
@@ -14,9 +14,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { findRecipe, readRecipes, upsertRecipe } from "@/data/recipe-storage";
 import { loadIngredients } from "@/data/ingredient-storage";
+import { recipeDisplayStatus } from "@/data/recipe-status";
 import { informantRoles, recipeCategories, recipeMonths, recipeOccasions, recipeSources, recipeSourceComplete, recipeStatusLabels, recipeVigencies, traditionalTechniques, type RecipeMedia, type RecipeRecord } from "@/data/recipes";
 import { MunicipalityField, SearchSelect, normalizeText } from "./recipe-form-controls";
-import { RecipePublicationControls } from "./recipe-publication-controls";
+import { RecipePublicationControls, type RecipePublicationState } from "./recipe-publication-controls";
 
 type SectionId="general"|"ingredients"|"preparation"|"temporality"|"source"|"media";
 const sections:{id:SectionId;label:string;description:string;icon:typeof Info}[]=[
@@ -37,6 +38,15 @@ export function RecipeEditor(){
   const params=useParams<{id:string}>();const router=useRouter();
   const user=useSessionUser();const canEdit=user?.role==="administrador"||user?.role==="capturista";
   const [recipe,setRecipe]=useState<RecipeRecord|null>(null);const [active,setActive]=useState<SectionId>("general");
+  // Publication metadata must not make the capture dirty or trigger its autosave.
+  const [publication,setPublication]=useState<(RecipePublicationState & {recipeId:string})|null>(null);
+  const recipeId=recipe?.id??"";
+  const handlePublicationChange=useCallback((confirmed:RecipePublicationState)=>{
+    if(recipeId)setPublication({...confirmed,recipeId});
+  },[recipeId]);
+  const confirmedPublication=publication?.recipeId===recipeId?publication:null;
+  const displayStatus=recipe?recipeDisplayStatus({status:recipe.status,publicStatus:confirmedPublication?(confirmedPublication.published?"published":"draft"):recipe.publicStatus}):"draft";
+  const isPublished=displayStatus==="published";
   const [loaded,setLoaded]=useState(false);const [saving,setSaving]=useState(false);const [loadError,setLoadError]=useState("");const [saveError,setSaveError]=useState("");const [lastSaved,setLastSaved]=useState("");
   const [ingredientOptions,setIngredientOptions]=useState<string[]>([]);const [creatingIngredient,setCreatingIngredient]=useState(false);const [ingredientName,setIngredientName]=useState("");const [readingFiles,setReadingFiles]=useState(false);const [selectedIngredient,setSelectedIngredient]=useState("");
   useEffect(()=>{let cancelled=false;findRecipe(params.id).then(item=>{if(!cancelled){setRecipe(item);setLastSaved(item?JSON.stringify(item):"");}}).catch(error=>{if(!cancelled)setLoadError(error.message);}).finally(()=>{if(!cancelled)setLoaded(true);});return()=>{cancelled=true;};},[params.id]);
@@ -53,7 +63,7 @@ export function RecipeEditor(){
   useEffect(()=>{if(!unsaved)return;const warn=(event:BeforeUnloadEvent)=>{event.preventDefault();event.returnValue="";};window.addEventListener("beforeunload",warn);return()=>window.removeEventListener("beforeunload",warn);},[unsaved]);
   const update=<K extends keyof RecipeRecord>(key:K,value:RecipeRecord[K])=>{if(canEdit)setRecipe(current=>current?{...current,[key]:value}:current);};
   const returnToList=()=>{if(unsaved){toast.info("Espera un momento mientras se guardan tus cambios.");return;}router.push("/recetas");};
-  const save=async(review=false)=>{if(!recipe||!canEdit)return;setSaving(true);const next={...recipe,completeness:percentage,status:review?"in-review" as const:recipe.status};try{await upsertRecipe(next);setRecipe(next);setLastSaved(JSON.stringify(next));setSaveError("");toast.success(review?"Receta en revisión":"Ficha guardada");}catch(error){setSaveError(error instanceof Error?error.message:"No se pudo guardar.");}finally{setSaving(false);}};
+  const save=async(review=false)=>{if(!recipe||!canEdit)return;setSaving(true);const next={...recipe,completeness:percentage,status:review?"in-review" as const:recipe.status};try{await upsertRecipe(next);setRecipe(next);setLastSaved(JSON.stringify(next));setSaveError("");toast.success(review?(isPublished?"Cambios enviados a revisión":"Receta en revisión"):"Ficha guardada");}catch(error){setSaveError(error instanceof Error?error.message:"No se pudo guardar.");}finally{setSaving(false);}};
   const createIngredient=()=>{const name=ingredientName.trim();if(!canEdit||!name||!recipe)return;const existing=ingredientOptions.find(item=>normalizeText(item)===normalizeText(name));const finalName=existing??name;if(!existing)setIngredientOptions(items=>[...items,name]);if(!recipe.ingredients.some(item=>normalizeText(item)===normalizeText(finalName)))update("ingredients",[...recipe.ingredients,finalName]);setIngredientName("");setCreatingIngredient(false);};
   const addFiles=async(files:FileList|File[]|null)=>{if(!files||!canEdit)return;setReadingFiles(true);const photos:RecipeMedia[]=[];const audio:RecipeMedia[]=[];
     for(const file of Array.from(files)){const isPhoto=["image/jpeg","image/png","image/webp"].includes(file.type);const isAudio=["audio/mpeg","audio/mp4","audio/x-m4a","audio/wav","audio/x-wav"].includes(file.type);if((!isPhoto&&!isAudio)||file.size>(isPhoto?8:20)*1024*1024){toast.error(`${file.name}: formato no admitido o tamaño excesivo.`);continue;}
@@ -64,8 +74,8 @@ export function RecipeEditor(){
   const currentIndex=sections.findIndex(item=>item.id===active);const current=sections[currentIndex];
   return <div className="acervo-page min-h-screen text-[#173257]"><ObservatorySidebar activeItem="Recetas"/><main className="admin-main"><div className="mx-auto max-w-[1360px]">
     {!loaded?<p className="p-12 text-center text-sm text-[#8190a4]" role="status">Cargando ficha…</p>:loadError||!recipe?<div className="acervo-card p-8"><h1 className="text-xl font-semibold">{loadError||"No encontramos esta receta"}</h1><button onClick={()=>router.push("/recetas")} className="acervo-primary mt-5"><ArrowLeft className="size-4"/>Volver a Recetas</button></div>:<>
-      <header className="acervo-heading"><div className="flex min-w-0 items-start gap-3"><button onClick={returnToList} aria-label="Volver a Recetas" className="acervo-secondary mt-0.5 size-9 shrink-0 p-0"><ArrowLeft className="size-4"/></button><div className="min-w-0"><p className="mb-1 text-[10px] text-[#8a97a9]">Acervo / Recetas / Ficha</p><h1 className="break-words">{recipe.name||"Receta sin nombre"}</h1><p className="flex flex-wrap items-center gap-x-3 gap-y-1"><span className={`recipe-status status-${recipe.status}`}>{recipeStatusLabels[recipe.status]}</span><span>{recipe.municipality}</span><span className="inline-flex items-center gap-1" role="status"><Check className="size-3"/>{saveError?"Cambios sin guardar":saving||unsaved?"Guardando…":"Guardado"}</span></p></div></div><div className="flex flex-wrap items-center gap-2">{canEdit&&<><button disabled={saving||readingFiles} onClick={()=>save()} className="acervo-secondary"><Save className="size-3.5"/>Guardar</button><button disabled={!mandatoryComplete||saving||unsaved||readingFiles||recipe.status==="in-review"} onClick={()=>save(true)} title={!mandatoryComplete?"Completa datos generales, ingredientes, preparación y fuentes.":"Enviar a revisión"} className="acervo-primary"><Send className="size-3.5"/>{recipe.status==="in-review"?"En revisión":"Enviar a revisión"}</button></>}</div></header>
-      <RecipePublicationControls key={recipe.id} id={recipe.id} disabled={saving||unsaved||readingFiles}/>
+      <header className="acervo-heading"><div className="flex min-w-0 items-start gap-3"><button onClick={returnToList} aria-label="Volver a Recetas" className="acervo-secondary mt-0.5 size-9 shrink-0 p-0"><ArrowLeft className="size-4"/></button><div className="min-w-0"><p className="mb-1 text-[10px] text-[#8a97a9]">Acervo / Recetas / Ficha</p><h1 className="break-words">{recipe.name||"Receta sin nombre"}</h1><p className="flex flex-wrap items-center gap-x-3 gap-y-1"><span className={`recipe-status status-${displayStatus}`}>{recipeStatusLabels[displayStatus]}</span><span>{recipe.municipality}</span><span className="inline-flex items-center gap-1" role="status"><Check className="size-3"/>{saveError?"Cambios sin guardar":saving||unsaved?"Guardando…":"Guardado"}</span></p></div></div><div className="flex flex-wrap items-center gap-2">{canEdit&&<><button disabled={saving||readingFiles} onClick={()=>save()} className="acervo-secondary"><Save className="size-3.5"/>Guardar</button><button disabled={!mandatoryComplete||saving||unsaved||readingFiles||(!isPublished&&recipe.status==="in-review")} onClick={()=>save(true)} title={!mandatoryComplete?"Completa datos generales, ingredientes, preparación y fuentes.":isPublished?"Enviar los cambios del borrador a revisión":"Enviar a revisión"} className="acervo-primary"><Send className="size-3.5"/>{isPublished?"Enviar cambios a revisión":recipe.status==="in-review"?"En revisión":"Enviar a revisión"}</button></>}</div></header>
+      <RecipePublicationControls key={recipe.id} id={recipe.id} disabled={saving||unsaved||readingFiles} onPublicationChange={handlePublicationChange}/>
       {!canEdit&&<p className="mt-3 text-xs text-[#8190a4]">Revisión de la ficha. Puedes consultar sus secciones y publicar la versión aprobada.</p>}
       {saveError&&<div className="mt-5 rounded-xl border border-red-100 bg-red-50 p-4 text-xs text-red-700" role="alert">{saveError} <button onClick={()=>save()} className="underline">Reintentar</button></div>}
       <div className="recipe-workspace mt-6">
