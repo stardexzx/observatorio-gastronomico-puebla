@@ -3,13 +3,15 @@
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, ArrowRight, AudioLines, BookOpen, CalendarDays, ChefHat, Clock3, MapPin, Mic2, Search, ShoppingBasket, Network, Sprout, Users, Wheat } from "lucide-react";
+import { ArrowLeft, ArrowRight, AudioLines, BookOpen, CalendarDays, ChefHat, Clock3, MapPin, Mic2, Search, ShoppingBasket, Network, Scale, Sprout, Users, Wheat } from "lucide-react";
 import { SectionShell } from "@/components/integration/section-shell";
 import { usePublicCatalog } from "@/components/public/public-catalog-provider";
 import type { RecipeRecord } from "@/data/recipes";
 import type { CookRecord } from "@/data/cooks";
 import type { IngredientRecord } from "@/data/ingredients";
 import type { Episode } from "@/data/podcasts";
+import { legalClassification, type LegalLinkKind } from "@/data/legal";
+import { linkedPublicLegalRecords, type PublicLegalIdentity } from "@/lib/legal-public-relations";
 import styles from "./catalog.module.css";
 
 type Resource = "recipes" | "cooks" | "ingredients" | "episodes";
@@ -78,6 +80,17 @@ function Location({entry}:{entry:Entry}) {
   return <Panel title="Lugar y contexto" icon={MapPin}><dl className={styles.facts}>{entry.municipality&&<div><dt>Municipio</dt><dd>{entry.municipality}</dd></div>}{"region" in entry&&entry.region&&<div><dt>Región</dt><dd>{entry.region}</dd></div>}{"community" in entry&&entry.community&&<div><dt>Comunidad</dt><dd>{entry.community}</dd></div>}</dl>{entry.municipalityCode&&<Link href={`/mapa?municipio=${encodeURIComponent(entry.municipalityCode)}`} className={`${styles.button} mt-5`}><MapPin size={14}/>Explorar en el mapa</Link>}</Panel>;
 }
 
+function LegalRelations({kind,entry}:{kind:LegalLinkKind;entry:PublicLegalIdentity}) {
+  const {legal}=usePublicCatalog();
+  const linked=linkedPublicLegalRecords(legal,kind,entry);
+  return <Panel title="Instrumentos jurídicos vinculados" icon={Scale}>
+    {linked.length?<><div className={styles.related}>{linked.map(({record,links})=>{
+      const scopes=[...new Set(links.map(link=>link.scope.trim()).filter(Boolean))];
+      return <div key={record.id}><Link href={`/proteccion-legal/${encodeURIComponent(record.id)}`}>{record.name}<ArrowRight size={14}/></Link><dl className={styles.facts}><div><dt>Tipo</dt><dd>{legalClassification(record.classification).label}</dd></div><div><dt>Alcance documentado</dt><dd>{scopes.join(" · ")||record.scope||"No documentado"}</dd></div></dl></div>;
+    })}</div><p>El vínculo documentado no otorga derechos ni protección automática. Consulta el alcance de cada instrumento.</p></>:<p>No hay instrumentos jurídicos publicados vinculados a esta ficha.</p>}
+  </Panel>;
+}
+
 function Gallery({entry}:{entry:RecipeRecord|CookRecord|IngredientRecord}) {
   const images=entry.photos.filter(photo=>publicMediaUrl(photo.url));
   if(!images.length)return null;
@@ -99,6 +112,7 @@ function RecipeContent({recipe}:{recipe:RecipeRecord}) {
     {!!audios.length&&<Panel title="Escuchar la preparación" icon={AudioLines}><div className={styles.audio}>{audios.map((audio,index)=><div key={audio.id||index}><p>{audio.caption||audio.name}</p><audio controls preload="none" src={publicMediaUrl(audio.url,"audio")}/></div>)}</div></Panel>}
   </div><aside className={styles.stack}>
     <Location entry={recipe}/>
+    <LegalRelations kind="recipes" entry={recipe}/>
     {!!linkedIngredients.length&&<Panel title="Fichas de ingredientes" icon={Wheat}><Related resource="ingredients" items={linkedIngredients}/></Panel>}
     {(!!recipe.months.length||!!recipe.occasions.length||recipe.vigency)&&<Panel title="Temporadas y celebraciones" icon={CalendarDays}><dl className={styles.facts}>{recipe.months.length>0&&<div><dt>Temporada</dt><dd>{recipe.months.join(", ")}</dd></div>}{recipe.occasions.length>0&&<div><dt>Celebraciones y ocasiones</dt><dd>{recipe.occasions.join(", ")}</dd></div>}{recipe.vigency&&<div><dt>Tradición</dt><dd>{recipe.vigency}</dd></div>}</dl></Panel>}
     {!!linkedCooks.length&&<Panel title="Cocineras y cocineros" icon={ChefHat}><Related resource="cooks" items={linkedCooks}/></Panel>}
@@ -119,6 +133,7 @@ function CookContent({cook}:{cook:CookRecord}) {
     <Gallery entry={cook}/>
   </div><aside className={styles.stack}>
     <Location entry={cook}/>
+    <LegalRelations kind="cooks" entry={cook}/>
     {(cook.yearsExperience||cook.languages.length||cook.collective||cook.studentCount>0)&&<Panel title="Saberes y comunidad" icon={Users}><dl className={styles.facts}>{cook.yearsExperience&&<div><dt>Años de experiencia</dt><dd>{cook.yearsExperience}</dd></div>}{!!cook.languages.length&&<div><dt>Lenguas</dt><dd>{cook.languages.join(", ")}</dd></div>}{cook.collective&&<div><dt>Colectivo</dt><dd>{cook.collective}</dd></div>}{cook.studentCount>0&&<div><dt>Personas a quienes ha enseñado</dt><dd>{cook.studentCount}</dd></div>}</dl></Panel>}
     {!!cook.culinaryLineage.length&&<Panel title="Linaje culinario"><ul>{cook.culinaryLineage.map((name,index)=><li key={index}>{name}</li>)}</ul></Panel>}
     {cook.recognitions&&<Panel title="Reconocimientos"><p>{cook.recognitions}</p></Panel>}
@@ -137,7 +152,7 @@ function IngredientContent({ingredient}:{ingredient:IngredientRecord}) {
     {!!ingredient.uses.length&&<Panel title="Usos gastronómicos"><Tags items={ingredient.uses}/></Panel>}
     {!!linked.length&&<Panel title="Recetas relacionadas" icon={BookOpen}><Related resource="recipes" items={linked}/></Panel>}
     <Gallery entry={ingredient}/>
-  </div><aside className={styles.stack}><Location entry={ingredient}/>{(ingredient.season||ingredient.months.length>0)&&<Panel title="Temporada" icon={CalendarDays}>{ingredient.season&&<p>{ingredient.season}</p>}{!!ingredient.months.length&&<div className="mt-3"><Tags items={ingredient.months}/></div>}</Panel>}{!!linkedEpisodes.length&&<Panel title="Capítulos relacionados" icon={Mic2}><Related resource="episodes" items={linkedEpisodes}/></Panel>}</aside></div>;
+  </div><aside className={styles.stack}><Location entry={ingredient}/><LegalRelations kind="ingredients" entry={ingredient}/>{(ingredient.season||ingredient.months.length>0)&&<Panel title="Temporada" icon={CalendarDays}>{ingredient.season&&<p>{ingredient.season}</p>}{!!ingredient.months.length&&<div className="mt-3"><Tags items={ingredient.months}/></div>}</Panel>}{!!linkedEpisodes.length&&<Panel title="Capítulos relacionados" icon={Mic2}><Related resource="episodes" items={linkedEpisodes}/></Panel>}</aside></div>;
 }
 
 function EpisodeContent({episode}:{episode:Episode}) {

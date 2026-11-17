@@ -6,6 +6,7 @@ import {createServer} from 'node:net';
 import {readFile,writeFile,mkdir,open} from 'node:fs/promises';
 import assert from 'node:assert/strict';
 import pg from 'pg';
+import {runLegalChecks} from './legal_checks.mjs';
 const exec=promisify(execFile),name=`ogp_public_test_${randomBytes(5).toString('hex')}`;
 const password=randomBytes(24).toString('hex');
 const image='postgis/postgis:16-3.5@sha256:94146ac37bc61e2322f88016056c5920729cb8c64c8542ed590af8fc2abdac07';
@@ -22,7 +23,7 @@ try{
  await exec(process.execPath,['scripts/init-unified.mjs'],{env,timeout:30000});
  await exec(process.execPath,['scripts/init-unified.mjs'],{env,timeout:30000});
  db=new pg.Client({connectionString:env.DATABASE_URL});await db.connect();
- for(const table of ['ogp.usuarios','ogp.registros','demo.recipe_forms','demo.catalog_forms','demo.public_catalog_versions','app_auth.credentials'])assert.equal((await db.query(`SELECT count(*) AS n FROM ${table}`)).rows[0].n,'0',`${table}: no catalog/account seeds`);
+ for(const table of ['ogp.usuarios','ogp.registros','demo.recipe_forms','demo.catalog_forms','demo.public_catalog_versions','app_auth.credentials','ogp.instrumentos_legales','ogp.expedientes_legales','ogp.legal_pdf_blobs'])assert.equal((await db.query(`SELECT count(*) AS n FROM ${table}`)).rows[0].n,'0',`${table}: no catalog/account seeds`);
  assert.equal((await db.query("SELECT jsonb_array_length(content) AS n FROM demo.editorial_content WHERE key='timeline'")).rows[0].n,5);
  await db.query(await readFile('tests/fixtures/publications.sql','utf8'));
  const accounts={};
@@ -90,13 +91,14 @@ try{
  data=await catalog();assert.equal(data.ingredients.filter(record=>record.name==='Chile sintético').length,1);assert.notEqual(data.ingredients.find(record=>record.name==='Chile sintético').description,'COPIA QUE DEBE PERDER');
  await exec(process.execPath,['scripts/init-unified.mjs'],{env,timeout:30000});
  data=await catalog();assert.ok(data.cooks.some(record=>record.id===cookId));assert.ok(data.episodes.some(record=>record.id===episodeId));assert.equal(data.timeline.length,5);
+ const legalFixtures=await runLegalChecks({db,get,send,origin,admin,capture,review,recipeId,ingredientId,cookId,draftRecipeId,privateIngredientId,migrate:()=>exec(process.execPath,['scripts/init-unified.mjs'],{env,timeout:30000})});
  const [cookieName,cookieValue]=admin.split('=');
- const session={origin,name:cookieName,value:cookieValue,reviewCookie:{name:review.split('=')[0],value:review.split('=')[1]},captureCookie:{name:capture.split('=')[0],value:capture.split('=')[1]},recipeId,cookId,ingredientId,episodeId,draftRecipeId,privateRecipeId:draftRecipeId,privateIngredientId,privateNames:['RECETA BORRADOR PRIVADO','INGREDIENTE PRIVADO','INFORMANTE PRIVADO','NOTAS PRIVADAS']};
+ const session={...legalFixtures,origin,name:cookieName,value:cookieValue,reviewCookie:{name:review.split('=')[0],value:review.split('=')[1]},captureCookie:{name:capture.split('=')[0],value:capture.split('=')[1]},recipeId,cookId,ingredientId,episodeId,draftRecipeId,privateRecipeId:draftRecipeId,privateIngredientId,privateNames:['RECETA BORRADOR PRIVADO','INGREDIENTE PRIVADO','INFORMANTE PRIVADO','NOTAS PRIVADAS','NOTA LEGAL PRIVADA','TITULO DE FUENTE LEGAL PRIVADA','REFERENCIA LEGAL PRIVADA','EVIDENCIA LEGAL PRIVADA.pdf']};
  await writeFile('work/public-browser-session.json',JSON.stringify(session),{mode:0o600});
  console.log(`API/SQL public checks passed. Browser test runtime: ${origin}`);
- const browserChecks=[['tests/public_browser.py',['work/public-browser-session.json']],['tests/timeline_browser.py',[origin]],['tests/consistent_views_browser.py',['work/public-browser-session.json']],['tests/recipe_publication_browser.py',['work/public-browser-session.json']]];
+ const browserChecks=[['tests/public_browser.py',['work/public-browser-session.json']],['tests/timeline_browser.py',[origin]],['tests/consistent_views_browser.py',['work/public-browser-session.json']],['tests/recipe_publication_browser.py',['work/public-browser-session.json']],['tests/legal_browser.py',['work/public-browser-session.json']]];
  // Reuse the same isolated data/permission checks for focused browser regression runs.
- const selectedChecks=process.argv.includes('--recipe-publication-only')?browserChecks.filter(([file])=>file==='tests/recipe_publication_browser.py'):process.argv.includes('--consistency-only')?browserChecks.filter(([file])=>file==='tests/consistent_views_browser.py'):browserChecks;
+ const selectedChecks=process.argv.includes('--legal-only')?browserChecks.filter(([file])=>file==='tests/legal_browser.py'):process.argv.includes('--recipe-publication-only')?browserChecks.filter(([file])=>file==='tests/recipe_publication_browser.py'):process.argv.includes('--consistency-only')?browserChecks.filter(([file])=>file==='tests/consistent_views_browser.py'):browserChecks;
  for(const [file,args] of selectedChecks){
   const browser=await exec('python',[file,...args],{env,timeout:360000,maxBuffer:300000});console.log(browser.stdout.trim());
  }

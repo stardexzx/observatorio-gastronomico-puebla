@@ -67,7 +67,7 @@ export interface LegalInput {
 export interface LegalRecord extends LegalInput {
   id:string; documents:LegalDocument[]; status:LegalEditorialStatus;
   published:boolean; publishedAt:string|null; latestRevisionId:string|null;
-  updatedAt:string; createdBy:string; trace:LegalTrace[]; capabilities:LegalCapabilities;
+  hasUnsubmittedChanges?:boolean; updatedAt:string; createdBy:string; trace:LegalTrace[]; capabilities:LegalCapabilities;
 }
 export interface LegalSummary {
   active:number; inProgress:number; protectedRecipes:number; coveredMunicipalities:number;
@@ -77,8 +77,8 @@ export interface LegalSummary {
 export interface LegalCatalog {records:LegalRecord[]; summary:LegalSummary;}
 export interface LegalOptions {options:LegalOption[];}
 export interface LegalPublicTargets {
-  recipes:{id:string;name:string}[]; ingredients:{id:string;name:string}[];
-  cooks:{id:string;name:string}[]; markets:{id:string;name:string}[];
+  recipes:{id:string;name:string;publicOrigin?:'ogp'|'panel'}[]; ingredients:{id:string;name:string;publicOrigin?:'ogp'|'panel'}[];
+  cooks:{id:string;name:string;publicOrigin?:'ogp'|'panel'}[]; markets:{id:string;name:string;publicOrigin?:'ogp'|'panel'}[];
 }
 export const LEGAL_MAX_PDF_BYTES = 20 * 1024 * 1024;
 export const LEGAL_MAX_DOCUMENTS = 12;
