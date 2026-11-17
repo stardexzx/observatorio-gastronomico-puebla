@@ -38,8 +38,11 @@ export function LegalCatalog({publicView=false,canCreate=false}:{publicView?:boo
   const [page,setPage]=useState(1);
   useEffect(()=>{
     const controller=new AbortController();
-    setLoading(true);setError("");
-    legalRequest<LegalCatalogData>(publicView?"/api/public/legal":"/api/legal",{signal:controller.signal}).then(data=>{
+    Promise.resolve().then(async()=>{
+      if(controller.signal.aborted)return;
+      setLoading(true);setError("");
+      const data=await legalRequest<LegalCatalogData>(publicView?"/api/public/legal":"/api/legal",{signal:controller.signal});
+      if(controller.signal.aborted)return;
       if(!Array.isArray(data.records)||!data.summary)throw new Error("El catálogo no tiene el formato esperado.");
       setCatalog(data);
     }).catch(error=>{if(!controller.signal.aborted){setCatalog(null);setError(error instanceof Error?error.message:"No se pudo cargar el catálogo.");}}).finally(()=>{if(!controller.signal.aborted)setLoading(false);});

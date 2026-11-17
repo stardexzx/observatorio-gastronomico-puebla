@@ -1,6 +1,8 @@
 # Protección legal: análisis previo y plan de integración
 
-## Estado de este documento
+> Este documento conserva el análisis previo a la implementación. La referencia técnica definitiva son los requisitos extraídos facilitados por el usuario; el PDF original es confidencial y no se incorpora. Consulta [la implementación y las instrucciones de Protección legal](PROTECCION_LEGAL.md) para el estado y la ejecución del módulo.
+
+## Estado al realizar este análisis previo
 
 - Repositorio analizado: `stardexzx/observatorio-gastronomico-puebla`.
 - Referencia consultada: rama `prueba`, commit `ebad6d66db0cbd2a3910980b2c7e3f51eda27c0b`.

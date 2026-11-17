@@ -14,8 +14,11 @@ function useLegalRecord(id:string,publicView:boolean) {
   const [retry,setRetry]=useState(0);
   useEffect(()=>{
     const controller=new AbortController();
-    setLoading(true);setError("");setRecord(null);
-    legalRequest<{record:LegalRecord}>((publicView?"/api/public/legal/":"/api/legal/")+encodeURIComponent(id),{signal:controller.signal}).then(data=>{
+    Promise.resolve().then(async()=>{
+      if(controller.signal.aborted)return;
+      setLoading(true);setError("");setRecord(null);
+      const data=await legalRequest<{record:LegalRecord}>((publicView?"/api/public/legal/":"/api/legal/")+encodeURIComponent(id),{signal:controller.signal});
+      if(controller.signal.aborted)return;
       if(!data.record?.id)throw new Error("La respuesta del servidor no contiene una ficha válida.");
       setRecord(data.record);
     }).catch(error=>{if(!controller.signal.aborted)setError(error instanceof Error?error.message:"No se pudo consultar la ficha.");}).finally(()=>{if(!controller.signal.aborted)setLoading(false);});

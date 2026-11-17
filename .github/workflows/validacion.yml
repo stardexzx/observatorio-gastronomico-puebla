@@ -37,6 +37,12 @@ jobs:
           python-version: '3.12'
       - name: Instalar dependencias del proyecto
         run: npm ci
+      - name: Pruebas de lógica
+        run: npm test
+      - name: Revisar el código
+        run: npm run lint
+      - name: Compilar
+        run: npm run build
       - name: Instalar el navegador de pruebas
         run: |
           python -m pip install playwright
@@ -47,12 +53,6 @@ jobs:
           with sync_playwright() as playwright:
               subprocess.run(['sudo', 'ln', '-sf', playwright.chromium.executable_path, '/usr/bin/chromium'], check=True)
           PY
-      - name: Pruebas de lógica
-        run: npm test
-      - name: Revisar el código
-        run: npm run lint
-      - name: Compilar
-        run: npm run build
       # El runner genera credenciales y un contenedor desechable propios;
       # no recibe secretos ni se conecta a una base instalada del usuario.
       - name: Integración con PostgreSQL y navegador

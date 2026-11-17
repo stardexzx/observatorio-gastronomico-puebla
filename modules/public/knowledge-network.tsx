@@ -41,7 +41,7 @@ export function PublicKnowledgeNetwork() {
     const complete=addPublicLegalGraph(result,catalog);
     complete.nodes.forEach((node,index)=>{node.x=380+295*Math.cos(index*2*Math.PI/Math.max(complete.nodes.length,1));node.y=240+175*Math.sin(index*2*Math.PI/Math.max(complete.nodes.length,1));});
     return complete;
-  },[catalog.recipes,catalog.cooks,catalog.ingredients,catalog.episodes,catalog.markets,catalog.legal,catalog.relations]);
+  },[catalog]);
   const matches = graph.nodes.filter(node=>node.n.toLocaleLowerCase("es-MX").includes(search.toLocaleLowerCase("es-MX")));
   const selectedNode = graph.nodes.find(node=>node.id===selected);
   const neighbors = new Set(graph.edges.filter(edge=>edge.source===selected||edge.target===selected).flatMap(edge=>[edge.source,edge.target]));

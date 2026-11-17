@@ -77,7 +77,7 @@ Si `auth:setup` informa que **ya existen cuentas activadas**, esa base ya tiene 
 | Recetarios PDF | Entrega del creador |
 | Usuarios, roles y acceso | Sesiones y cuentas de la entrega del creador |
 | Mercados y tianguis | Apartado pendiente en usuario y admin, como en el ZIP; filtro del mapa disponible |
-| Protección legal | Apartado reservado, sin contenido público por ahora |
+| Protección legal | Instrumentos jurídicos, fuentes y PDF; consulta de revisiones autorizadas y captura con permisos del equipo |
 | Datos y análisis | Reportes con cifras reales y red de conocimiento de registros publicados |
 | Mapa | Consulta de publicaciones por municipio, conserva colores cartográficos y usa controles del panel |
 | Conocer el observatorio | Memoria histórica (5 épocas y 12 hitos en BD) y Acerca del observatorio |
@@ -92,6 +92,12 @@ En **Menú del equipo → Registros anteriores** puedes revisar los registros de
 Los almacenes del navegador pertenecen a su dominio y puerto: para recuperar registros anteriores debes abrir el panel en el mismo navegador y origen donde se capturaron. No se borran automáticamente los almacenes antiguos. Los adjuntos que antes se guardaron con una URL temporal necesitan volver a adjuntarse si esa URL ya venció. Los catálogos nuevos de cocineras, ingredientes y podcast se guardan en PostgreSQL. Los archivos locales de la entrega anterior se conservan, pero no se publican ni importan automáticamente. El resumen y los reportes reflejan exclusivamente publicaciones en ambas vistas. Las herramientas de Acervo permiten al equipo consultar y editar los borradores.
 
 Consulta [los criterios de integración](docs/INTEGRACION_AUTOR.md), el [README original de la entrega](docs/README_ENTREGA_AUTOR.md) y sus documentos conservados en `docs/autor/`. Los textos originales que describen otras formas de arranque no sustituyen los comandos de este README.
+
+## Protección legal
+
+El módulo reutiliza las tablas jurídicas de PostgreSQL y conserva los tres roles del equipo. Incluye captura y revisión de instrumentos, fuentes, PDF persistentes, relaciones con el acervo y consulta pública de versiones aprobadas. Los indicadores se calculan con datos reales; no se cargan instrumentos jurídicos de ejemplo.
+
+Si actualizas una instalación existente, ejecuta `npm run db:migrate` antes de iniciar el proyecto. Consulta [funcionalidades, migración, archivos y pruebas de Protección legal](docs/PROTECCION_LEGAL.md).
 
 ## Comprobaciones
 

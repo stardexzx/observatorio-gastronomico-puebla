@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import {
   createBlankLegalInput, legalInputFromRecord, legalClassificationOptions,
@@ -78,9 +78,9 @@ export function LegalEditor({ record, canCreate = false }: { record?: LegalRecor
   const alertRef = useRef<HTMLDivElement>(null);
   const dirty = JSON.stringify(input) !== baseline || pending.length > 0;
   const guarded = useRef(false);
-  guarded.current = dirty || busy;
   const editable = current ? current.capabilities.edit : canCreate;
 
+  useLayoutEffect(() => { guarded.current = dirty || busy; }, [dirty, busy]);
   useEffect(() => {
     const controller = new AbortController();
     request<{ options: LegalOption[] }>("/api/legal/options", { signal: controller.signal })

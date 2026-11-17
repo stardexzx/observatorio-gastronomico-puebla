@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useId, useState, type KeyboardEvent } from "react";
+import { useId, useState, type KeyboardEvent } from "react";
 import Link from "next/link";
 import { legalClassification, legalDossierLabels, legalJurisdictionLabels, legalLinkLabels, legalSituationLabels, legalSpecificFields, legalThemeOptions, type LegalRecord } from "@/data/legal";
 import { LegalIcon, LegalSafeLink, LegalStatus, legalDate, safeLegalHref } from "./legal-ui";
@@ -13,10 +13,13 @@ function Facts({items}:{items:[string,string|null|undefined][]}) {
 function TextField({label,value}:{label:string;value:string}) {
   return <div className="legal-text-field"><h3 className="g-h4">{label}</h3><p className="g-p legal-preserve">{value||"Sin documentar"}</p></div>;
 }
-export function LegalRecordView({record,compact=false,publicView=false}:{record:LegalRecord;compact?:boolean;publicView?:boolean}) {
+type LegalRecordViewProps={record:LegalRecord;compact?:boolean;publicView?:boolean};
+export function LegalRecordView(props:LegalRecordViewProps) {
+  return <LegalRecordContent key={props.record.id} {...props}/>;
+}
+function LegalRecordContent({record,compact=false,publicView=false}:LegalRecordViewProps) {
   const [tab,setTab]=useState<Tab>("summary");
   const id=useId();
-  useEffect(()=>setTab("summary"),[record.id]);
   const classification=legalClassification(record.classification);
   const documents=record.documents.filter(document=>!publicView||document.visibility==="publico");
   const sources=record.sources.filter(source=>!publicView||source.visibility==="publico");
