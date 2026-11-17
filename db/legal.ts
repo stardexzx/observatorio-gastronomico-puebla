@@ -65,7 +65,7 @@ async function capabilities(db:DB,user:SessionUser,row:Row):Promise<LegalCapabil
  ogp.tiene_permiso($1,'instrumento','publicar',$2) AS publish,
  ogp.tiene_permiso($1,'instrumento','retirar',$2) AS withdraw`,[user.id,row.id]);
  const admin=user.role==='administrador',capture=user.role!=='revisor',editable=row.estado_ultima_revision!=='en_revision';
- return {edit:capture&&editable&&(admin||p.edit),submit:capture&&editable&&(admin||p.submit),review:p.review&&row.estado_ultima_revision==='en_revision',publish:p.publish&&row.estado_ultima_revision==='validado',withdraw:p.withdraw&&Boolean(row.revision_publica_id),archive:capture&&(admin||p.edit)};
+ return {edit:capture&&editable&&(admin||p.edit),submit:capture&&editable&&(admin||p.submit),review:p.review&&row.estado_ultima_revision==='en_revision',publish:p.publish&&row.estado_ultima_revision==='validado',withdraw:p.withdraw&&Boolean(row.revision_publica_id),archive:capture&&(admin||p.edit)&&(!row.revision_publica_id||p.withdraw)};
 }
 async function options(db:DB):Promise<LegalOption[]>{
  const {rows}=await db.query(`

@@ -163,6 +163,9 @@ export async function runLegalChecks(context) {
  assert.equal(await revisionHash(reviewedRevision),reviewedHash,'The previous validated revision remains immutable');
  record=await action(legalId,'publish',review);
  assert.equal(record.published,true);assert.ok(record.publishedAt);
+ const captureView=await privateRecord(legalId);
+ assert.equal(captureView.capabilities.archive,false,'A capturista cannot archive an active publication without withdrawal permission');
+ assert.equal((await send('/api/legal/'+legalId,{},capture,'DELETE')).status,403,'Archiving an active publication requires the existing withdrawal permission');
  const approved=await publicCatalog(),published=approved.records.find(item=>item.id===legalId);
  assert.ok(published);assert.equal(published.status,'publicado');assert.equal(published.name,input.name);
  assertNoPrivate(approved);assertNoPrivate(await parse(await get('/api/public/catalog')));

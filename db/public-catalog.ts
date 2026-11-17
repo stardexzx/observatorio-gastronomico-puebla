@@ -1,3 +1,4 @@
+import {legalLinkKey} from '@/data/legal';
 import 'server-only';
 import {pool,requireDemo} from './postgres';
 import {normalizeRecipe} from '@/data/recipes';
@@ -59,5 +60,13 @@ export async function loadPublicCatalog(){
  const legal=await readPublicLegalCatalog({recipes:targets(recipes),ingredients:targets(ingredients),cooks:targets(cooks),markets:targets(original.markets)});
  const visible=new Set([...recipes,...ingredients,...cooks,...episodes,...original.markets].map(item=>String(item.id)));
  const relations=original.relations.filter(edge=>visible.has(edge.source)&&visible.has(edge.target));
+ // Reuse the instrument's approved links for the API and every reverse traversal.
+ const legalEdges=new Set<string>();
+ for(const record of legal.records)for(const link of record.links){
+  const key=record.id+'|'+legalLinkKey(link);
+  if(legalEdges.has(key))continue;
+  legalEdges.add(key);
+  relations.push({source:record.id,target:link.id,sourceKind:'legal',targetKind:link.kind,sourceOrigin:'ogp',targetOrigin:link.origin,type:'instrumento_relacionado',label:'Vínculo jurídico documentado',scope:link.scope});
+ }
  return {recipes,cooks,ingredients,episodes,markets:original.markets,legal:legal.records,legalSummary:legal.summary,timeline:Array.isArray(editorial.rows[0]?.content)?editorial.rows[0].content:[],relations};
 }
