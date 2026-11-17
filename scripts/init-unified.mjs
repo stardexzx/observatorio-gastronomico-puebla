@@ -35,7 +35,7 @@ try {
   await client.query("SELECT pg_advisory_xact_lock(982341)");
   const { rows: [state] } = await client.query("SELECT to_regnamespace('ogp') IS NOT NULL AS installed");
   if (!state.installed) await client.query(await sqlFile("observatorio_puebla.sql"));
-  for (const migration of ["006_consultar_fichas_tipo.sql", "006_login.sql", "007_panel_forms.sql", "008_public_catalogs.sql"]) {
+  for (const migration of ["006_consultar_fichas_tipo.sql", "006_login.sql", "007_panel_forms.sql", "008_public_catalogs.sql", "009_legal_module.sql"]) {
     await client.query(await sqlFile(`migrations/${migration}`));
   }
   // Existing editorial history is content supplied in this project, not synthetic catalog data.

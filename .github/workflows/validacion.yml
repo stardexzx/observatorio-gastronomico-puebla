@@ -2,7 +2,7 @@ name: Validación del observatorio
 
 on:
   push:
-    branches: [prueba]
+    branches: [prueba, proteccion-legal]
   pull_request:
     branches: [prueba]
   workflow_dispatch:
