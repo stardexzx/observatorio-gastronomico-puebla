@@ -66,6 +66,8 @@ export interface LegalInput {
 }
 export interface LegalRecord extends Omit<LegalInput,'privateNotes'> {
   privateNotes?:string;
+  /** Ephemeral input-to-canonical source IDs returned only by capture saves. */
+  sourceIdChanges?:Record<string,string>;
   id:string; documents:LegalDocument[]; status:LegalEditorialStatus;
   published:boolean; publishedAt:string|null; latestRevisionId:string|null;
   hasUnsubmittedChanges?:boolean; updatedAt:string; createdBy?:string; trace:LegalTrace[]; capabilities:LegalCapabilities;

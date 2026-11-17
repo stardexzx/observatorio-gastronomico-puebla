@@ -200,7 +200,7 @@ async function saveDossier(db:DB,user:SessionUser,id:string,input:LegalInput,pre
 }
 async function saveCapture(db:PoolClient,user:SessionUser,id:string,input:LegalInput,previous:Row){
  const sources=await saveSources(db,user,id,input.sources);
- const links=await saveLinks(db,id,input.links,sources);
+ await saveLinks(db,id,input.links,sources);
  const attached=await db.query('SELECT archivo_id,fuente_id FROM ogp.instrumento_pdf_adjuntos WHERE instrumento_id=$1 FOR UPDATE',[id]);
  const external=await db.query('SELECT archivo_id FROM ogp.instrumento_archivos WHERE instrumento_id=$1',[id]);
  const existing=new Set([...attached.rows,...external.rows].map(r=>r.archivo_id));
@@ -216,7 +216,7 @@ async function saveCapture(db:PoolClient,user:SessionUser,id:string,input:LegalI
  await db.query(`UPDATE ogp.instrumentos_legales SET nombre_oficial=$2,tipo_id=(SELECT id FROM ogp.tipos_instrumento_legal WHERE codigo=$3),autoridad=$4,referencia_oficial=$5,fecha_emision=$6,vigente_desde=$7,vigente_hasta=$8,alcance=$9,situacion=$10,fecha_revision=$11 WHERE id=$1`,[id,input.name,input.classification,nullable(input.authority),nullable(input.officialReference),nullable(input.publicationDate),nullable(input.validFrom),nullable(input.validUntil),nullable(input.scope),input.situation,nullable(input.reviewDate)]);
  await db.query(`INSERT INTO ogp.instrumento_panel(instrumento_id,form,notas_privadas,expediente_id,actualizado_por) VALUES($1,$2,$3,$4,$5) ON CONFLICT(instrumento_id) DO UPDATE SET form=EXCLUDED.form,notas_privadas=EXCLUDED.notas_privadas,expediente_id=EXCLUDED.expediente_id,actualizado_por=EXCLUDED.actualizado_por,actualizado_en=now()`,[id,JSON.stringify(form),input.privateNotes,dossierId,user.id]);
  await db.query('UPDATE ogp.registros SET actualizado_en=now() WHERE id=$1',[id]);
- return links;
+ return {sourceIdChanges:Object.fromEntries(sources)};
 }
 export async function createLegalRecord(user:SessionUser,body:unknown):Promise<LegalRecord>{
  const input=legalInputSchema.parse(body);
@@ -224,8 +224,8 @@ export async function createLegalRecord(user:SessionUser,body:unknown):Promise<L
   if(acting.role==='revisor')throw new LegalFailure('La cuenta de revisión no realiza capturas.',403);
   const id=(await db.query("SELECT ogp.crear_registro($1,'instrumento') AS id",[acting.id])).rows[0].id;
   await db.query('INSERT INTO ogp.instrumentos_legales(id,nombre_oficial) VALUES($1,$2)',[id,input.name]);
-  await saveCapture(db,acting,id,input,{});
-  return workingRecord(db,acting,await recordRow(db,id));
+  const changes=await saveCapture(db,acting,id,input,{});
+  return {...(await workingRecord(db,acting,await recordRow(db,id))),...changes};
  });
 }
 export async function updateLegalRecord(user:SessionUser,id:string,body:unknown):Promise<LegalRecord>{
@@ -234,8 +234,8 @@ export async function updateLegalRecord(user:SessionUser,id:string,body:unknown)
   const previous=await recordRow(db,id,true);if(previous.archivado_en)throw new LegalFailure('La ficha está archivada.',409);
   if(previous.estado_ultima_revision==='en_revision')throw new LegalFailure('Concluye la revisión antes de editar la captura.',409);
   await capturePermission(db,acting,id);
-  await saveCapture(db,acting,id,input,previous);
-  return workingRecord(db,acting,await recordRow(db,id));
+  const changes=await saveCapture(db,acting,id,input,previous);
+  return {...(await workingRecord(db,acting,await recordRow(db,id))),...changes};
  });
 }
 export async function archiveLegalRecord(user:SessionUser,id:string):Promise<LegalRecord>{
@@ -331,7 +331,7 @@ export async function uploadLegalDocument(user:SessionUser,id:string,input:Legal
   const documents=await documentRows(db,id);if(documents.length>=LEGAL_MAX_DOCUMENTS)throw new LegalFailure('La ficha admite hasta '+LEGAL_MAX_DOCUMENTS+' documentos.',409);
   if(input.sourceId){legalIdentifierSchema.parse(input.sourceId);if(!(await db.query('SELECT 1 FROM ogp.instrumento_fuentes WHERE instrumento_id=$1 AND fuente_id=$2',[id,input.sourceId])).rowCount)throw new LegalFailure('La fuente del PDF debe pertenecer al instrumento.');}
   const fileId=randomUUID(),hash=createHash('sha256').update(input.bytes).digest('hex');
-  await db.query(`INSERT INTO ogp.archivos(id,proveedor,clave_externa,nombre,tipo_mime,tamano_bytes,estado,visibilidad,licencia,creado_por) VALUES($1,'postgres_legal',$1::text,$2,'application/pdf',$3,'disponible',$4,$5,$6)`,[fileId,name,input.bytes.length,input.visibility,nullable(input.license),acting.id]);
+  await db.query(`INSERT INTO ogp.archivos(id,proveedor,clave_externa,nombre,tipo_mime,tamano_bytes,estado,visibilidad,licencia,creado_por) VALUES($1::uuid,'postgres_legal',$1::text,$2,'application/pdf',$3,'disponible',$4,$5,$6)`,[fileId,name,input.bytes.length,input.visibility,nullable(input.license),acting.id]);
   await db.query('INSERT INTO ogp.legal_pdf_blobs(archivo_id,instrumento_id,contenido,sha256) VALUES($1,$2,$3,$4)',[fileId,id,input.bytes,hash]);
   await db.query('INSERT INTO ogp.instrumento_pdf_adjuntos(instrumento_id,archivo_id,fuente_id,orden) VALUES($1,$2,$3,$4)',[id,fileId,input.sourceId||null,documents.length+1]);
   await db.query('UPDATE ogp.registros SET actualizado_en=now() WHERE id=$1',[id]);
@@ -424,7 +424,7 @@ export async function readPublicLegalCatalog(targets:LegalPublicTargets):Promise
   const local:LegalDocument[]=pdfs.rows.filter(p=>p.revision_id===row.revision_id).map(p=>({id:p.archivo_id,name:p.nombre,size:Number(p.tamano_bytes),sha256:p.sha256,uploadedAt:iso(p.creado_en),visibility:'publico',license:p.licencia,url:'/api/legal/documents/'+p.archivo_id}));
   const external:LegalDocument[]=array(content.archivos).filter(a=>a.tipo_mime==='application/pdf').map(a=>({id:a.id,name:a.nombre,size:null,sha256:'',uploadedAt:'',visibility:'publico',license:str(a.licencia),url:a.url}));
   const approvedDocuments=new Map([...local,...external].map(d=>[d.id,d]));
-  const documents=snapshot?array(snapshot.documents).flatMap(d=>{const current=approvedDocuments.get(d.id);return current?[current]:[];}):[...local,...external];
+  const documents=snapshot?array(snapshot.documents).flatMap(d=>{const current=approvedDocuments.get(d.id);return current?[{...current,...(allowedSources.has(d.sourceId)?{sourceId:d.sourceId}:{})}]:[];}):[...local,...external];
   const frozenTerritories=territories.rows.filter(t=>t.revision_id===row.revision_id&&t.cvegeo);
   let links:LegalLink[];
   if(snapshot){

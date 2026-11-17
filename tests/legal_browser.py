@@ -126,6 +126,11 @@ with sync_playwright() as playwright:
     expect(editor.get_by_label("Diario o periódico oficial", exact=True)).to_be_visible()
     expect(editor.get_by_label("Nombre protegido", exact=True)).to_have_count(0)
     editor.get_by_label("Nombre del instrumento", exact=True).fill("Borrador legal capturado desde el navegador")
+    source_title = "Fuente sintética de interfaz"
+    editor.get_by_role("button", name="Añadir fuente", exact=True).click()
+    editor.get_by_label("Título", exact=True).fill(source_title)
+    editor.get_by_label("Referencia documental", exact=True).fill("Referencia sintética de prueba UI-001")
+    editor.get_by_label("URL de la fuente", exact=True).fill("https://invalid.example/legal-ui/source")
     file_input = editor.get_by_label("Seleccionar documentos PDF", exact=True)
     assert file_input.get_attribute("multiple") is not None
     file_input.set_input_files([
@@ -135,6 +140,9 @@ with sync_playwright() as playwright:
     licenses = editor.get_by_label("Licencia o autorización de uso", exact=True)
     expect(licenses).to_have_count(2)
     licenses.first.fill("Autorización sintética para pruebas de interfaz")
+    document_sources = editor.get_by_label("Fuente del documento (opcional)", exact=True)
+    document_sources.first.select_option(label=source_title)
+    client_source_id = document_sources.first.input_value()
     # The second restricted PDF deliberately has no documented license.
     editor.screenshot(path=str(output / "editor-classification.png"), full_page=True)
     with editor.expect_response(lambda response: response.request.method == "POST" and response.url == origin + "/api/legal") as created:
@@ -144,6 +152,10 @@ with sync_playwright() as playwright:
     stored = success(team.request.get(origin + "/api/legal/" + new_record["id"]))["record"]
     assert not stored["published"] and stored["status"] == "borrador"
     assert len(stored["documents"]) == 2
+    canonical_source_id = new_record["sourceIdChanges"][client_source_id]
+    assert canonical_source_id != client_source_id
+    assert canonical_source_id in {source["id"] for source in stored["sources"]}
+    assert next(document for document in stored["documents"] if document["name"] == "evidencia-ui-uno.pdf")["sourceId"] == canonical_source_id
     assert any(document["name"] == "evidencia-ui-dos.pdf" and not document["license"] for document in stored["documents"])
     for document in stored["documents"]:
         assert anonymous.request.get(origin + "/api/legal/documents/" + document["id"]).status == 404

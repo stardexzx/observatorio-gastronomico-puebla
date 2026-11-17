@@ -21,7 +21,10 @@ export function legalError(error:unknown){
  if(code==='22P02'||code==='22007'||code==='22008'||code==='23514'||code==='23502')return legalJson({error:'Los datos del instrumento no son válidos.'},400);
  if(code==='23503'||code==='23505'||code==='40001'||code==='40P01')return legalJson({error:'La información cambió o contiene referencias no disponibles. Actualiza y vuelve a intentarlo.'},409);
  if(code==='P0001')return legalJson({error:'El estado, los permisos o la documentación no permiten esta operación.'},409);
- console.error('Legal service unavailable',error instanceof Error?error.name:'unknown');
+ const metadata=typeof error==='object'&&error!==null?error as Record<string,unknown>:{};
+ const identifier=(value:unknown)=>typeof value==='string'&&/^[a-zA-Z0-9_]{1,120}$/.test(value)?value:undefined;
+ // Structural diagnostic only: no messages, SQL text, parameters or personal data.
+ console.error('OGP_LEGAL_ERROR '+JSON.stringify({type:identifier(error instanceof Error?error.name:'unknown'),code:identifier(code),table:identifier(metadata.table),column:identifier(metadata.column),constraint:identifier(metadata.constraint),position:typeof metadata.position==='string'&&/^\d+$/.test(metadata.position)?metadata.position:undefined}));
  return legalJson({error:'No se pudo completar la solicitud. Intenta de nuevo más tarde.'},503);
 }
 export async function legalUser(){

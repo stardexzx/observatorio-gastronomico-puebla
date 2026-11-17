@@ -164,11 +164,13 @@ export function LegalEditor({ record, canCreate = false }: { record?: LegalRecor
         method: current ? "PUT" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input),
       });
       const recordId = result.record.id;
+      const sourceIds = result.record.sourceIdChanges ?? {};
+      setPending(previous => previous.map(document => ({ ...document, sourceId: sourceIds[document.sourceId] ?? document.sourceId })));
       saved = result.record; accept(result.record);
       for (const document of pending) {
         const form = new FormData();
         form.set("file", document.file); form.set("visibility", document.visibility); form.set("license", document.license);
-        if (document.sourceId) form.set("sourceId", document.sourceId);
+        if (document.sourceId) form.set("sourceId", sourceIds[document.sourceId] ?? document.sourceId);
         const uploaded: { record: LegalRecord } = await request<{ record: LegalRecord }>("/api/legal/" + encodeURIComponent(recordId) + "/documents", { method: "POST", body: form });
         saved = uploaded.record; accept(uploaded.record);
         setPending(previous => previous.filter(item => item.id !== document.id));

@@ -103,6 +103,17 @@ try{
   const browser=await exec('python',[file,...args],{env,timeout:360000,maxBuffer:300000});console.log(browser.stdout.trim());
  }
  console.log('Public integration: approved snapshots, private drafts, roles, original DB, persistence and browser checks passed.');
+}catch(error){
+ // CI diagnostics are restricted to structural PostgreSQL error identifiers.
+ // Never print server output, request bodies, credentials or uploaded documents.
+ if(process.env.CI==='true'){
+  const output=await readFile('work/public-server.log','utf8').catch(()=>'');
+  for(const line of output.split('\n')){
+   const at=line.indexOf('OGP_LEGAL_ERROR ');
+   if(at>=0){try{const data=JSON.parse(line.slice(at+'OGP_LEGAL_ERROR '.length));const safe=Object.fromEntries(Object.entries(data).filter(([key,value])=>['type','code','table','column','constraint','position'].includes(key)&&typeof value==='string'&&/^[A-Za-z0-9_]{1,120}$/.test(value)));console.error('OGP_LEGAL_ERROR '+JSON.stringify(safe));}catch{/* Ignore non-diagnostic output. */}}
+  }
+ }
+ throw error;
 }finally{
  if(server){server.kill('SIGTERM');await pause(500);if(server.exitCode===null)server.kill('SIGKILL');}
  if(log)await log.close();if(db)await db.end().catch(()=>{});
