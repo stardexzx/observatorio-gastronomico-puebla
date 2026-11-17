@@ -443,8 +443,8 @@ export async function readPublicLegalCatalog(targets:LegalPublicTargets):Promise
    });
    const seen=new Set<string>();for(const t of frozenTerritories)if(!seen.has(t.territorio_id)){seen.add(t.territorio_id);links.push({kind:'municipalities',origin:'ogp',id:t.territorio_id,name:t.nombre_en_revision,scope:str(t.tipo_vinculo),sourceId:'',municipalityCode:t.cvegeo,href:hrefFor('municipalities',t.territorio_id,t.cvegeo)});}
   }
-  const publicInput:Row={};
-  for(const key of Object.keys(input))if(!['privateNotes','sources','links','documentIds','dossier'].includes(key))publicInput[key]=input[key as keyof LegalInput];
+  const publicInput={} as Omit<LegalInput,'privateNotes'|'sources'|'links'|'documentIds'|'dossier'>;
+  for(const key of Object.keys(input))if(!['privateNotes','sources','links','documentIds','dossier'].includes(key))Object.assign(publicInput,{[key]:input[key as keyof LegalInput]});
   // Legacy revisions have no legal form: adapt only documented native fields.
   if(!snapshot)publicInput.jurisdiction='otro';
   const classification=legalClassificationOptions.some(c=>c.value===row.classification)?row.classification:'otro';

@@ -163,17 +163,18 @@ export function LegalEditor({ record, canCreate = false }: { record?: LegalRecor
       const result = await request<{ record: LegalRecord }>(current ? "/api/legal/" + encodeURIComponent(current.id) : "/api/legal", {
         method: current ? "PUT" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input),
       });
-      saved = result.record; accept(saved);
+      const recordId = result.record.id;
+      saved = result.record; accept(result.record);
       for (const document of pending) {
         const form = new FormData();
         form.set("file", document.file); form.set("visibility", document.visibility); form.set("license", document.license);
         if (document.sourceId) form.set("sourceId", document.sourceId);
-        const uploaded = await request<{ record: LegalRecord }>("/api/legal/" + encodeURIComponent(saved.id) + "/documents", { method: "POST", body: form });
-        saved = uploaded.record; accept(saved);
+        const uploaded: { record: LegalRecord } = await request<{ record: LegalRecord }>("/api/legal/" + encodeURIComponent(recordId) + "/documents", { method: "POST", body: form });
+        saved = uploaded.record; accept(uploaded.record);
         setPending(previous => previous.filter(item => item.id !== document.id));
       }
       setMessage("Ficha guardada. Estado y permisos actualizados por el servidor.");
-      if (!record) router.replace("/proteccion-legal/" + encodeURIComponent(saved.id) + "/editar");
+      if (!record) router.replace("/proteccion-legal/" + encodeURIComponent(recordId) + "/editar");
     } catch (reason) {
       fail(reason);
       if (saved) setMessage("La ficha se guardó. Los archivos que siguen pendientes pueden volver a intentarse con Guardar.");

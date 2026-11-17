@@ -64,10 +64,11 @@ export interface LegalInput {
   specificFields:Record<string,string>; sources:LegalSource[]; links:LegalLink[];
   documentIds:string[]; dossier:LegalDossier|null; privateNotes:string;
 }
-export interface LegalRecord extends LegalInput {
+export interface LegalRecord extends Omit<LegalInput,'privateNotes'> {
+  privateNotes?:string;
   id:string; documents:LegalDocument[]; status:LegalEditorialStatus;
   published:boolean; publishedAt:string|null; latestRevisionId:string|null;
-  hasUnsubmittedChanges?:boolean; updatedAt:string; createdBy:string; trace:LegalTrace[]; capabilities:LegalCapabilities;
+  hasUnsubmittedChanges?:boolean; updatedAt:string; createdBy?:string; trace:LegalTrace[]; capabilities:LegalCapabilities;
 }
 export interface LegalSummary {
   active:number; inProgress:number; protectedRecipes:number; coveredMunicipalities:number;
@@ -92,7 +93,7 @@ export function createBlankLegalInput():LegalInput {
     operationalChallenges:'',legalGaps:'',linkedPolicies:'',specificFields:{},sources:[],links:[],
     documentIds:[],dossier:null,privateNotes:''};
 }
-export function legalInputFromRecord(record:LegalInput):LegalInput {
+export function legalInputFromRecord(record:Partial<LegalInput>):LegalInput {
   const input=createBlankLegalInput();
   for(const key of Object.keys(input) as (keyof LegalInput)[]) {
     if(record[key]!==undefined)Object.assign(input,{[key]:record[key]});
