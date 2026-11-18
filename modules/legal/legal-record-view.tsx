@@ -36,7 +36,7 @@ function LegalRecordContent({record,compact=false,publicView=false}:LegalRecordV
   }
   return <article className={compact?"g-detail legal-preview":"g-card legal-record"} aria-label={compact?"Ficha seleccionada":"Ficha del instrumento"}>
     <div className="legal-record-heading">
-      <span className="g-dot legal-instrument-icon" style={{background:classification.color+"19",color:classification.color}}><LegalIcon name={classification.icon} size={compact?26:32}/></span>
+      <span className="g-dot legal-instrument-icon" style={{background:classification.color,color:"#fff"}}><LegalIcon name={classification.icon} size={compact?26:32}/></span>
       <div><div className="g-dh"><span className="g-tag" style={{color:classification.color,background:classification.color+"15"}}>{classification.label}</span><LegalStatus record={record}/></div><h2>{record.name}</h2><p className="g-sm">{legalJurisdictionLabels[record.jurisdiction]} · {legalSituationLabels[record.situation]}</p></div>
     </div>
     <Facts items={[["Autoridad",record.authority],["Referencia oficial",record.officialReference],["Publicación",record.publicationDate?legalDate(record.publicationDate):""],["Última actualización",legalDate(record.updatedAt)]]}/>

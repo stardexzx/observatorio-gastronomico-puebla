@@ -15,7 +15,7 @@
 .legal-module .g-card{background:#fff;border:1px solid #E3E7EE;border-radius:13px;overflow:hidden}
 .legal-module .g-ch{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:14px 16px;border-bottom:1px solid #E3E7EE}
 .legal-module .g-ch h2{margin:0;font-size:13px;font-weight:750;color:#10284C}
-.legal-module .g-dot{display:inline-flex;width:36px;height:36px;align-items:center;justify-content:center;border-radius:10px;flex:0 0 auto}
+.legal-module .g-dot{display:inline-flex;width:36px;height:36px;align-items:center;justify-content:center;border-radius:50%;flex:0 0 auto}
 .legal-module .g-kpis.c5{gap:12px;margin-bottom:18px}
 .legal-module .g-kpi{min-width:0;min-height:132px;padding:14px 15px}
 .legal-module .g-kpi em{color:#64748B;overflow-wrap:anywhere;line-height:1.4}
@@ -54,7 +54,7 @@
 .legal-module .legal-pagination .g-btn{font-size:10px;padding:6px 10px;min-height:30px}
 .legal-module .legal-preview{padding:17px;min-width:0}
 .legal-module .legal-record-heading{display:flex;align-items:flex-start;gap:12px}
-.legal-module .legal-instrument-icon{width:46px;height:46px;border-radius:12px}
+.legal-module .legal-instrument-icon{width:46px;height:46px;border-radius:50%}
 .legal-module .legal-record-heading>div{min-width:0}
 .legal-module .legal-record-heading h2{font-size:18px;color:#10284C;line-height:1.3;margin:2px 0 7px;overflow-wrap:anywhere}
 .legal-module .legal-record-heading .g-dh{gap:5px;align-items:flex-start;margin-bottom:7px}
