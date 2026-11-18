@@ -19,7 +19,7 @@ export function LegalWorkflowControls({record,onChange,disabled=false}:{record:L
     if(action==="archive"&&!window.confirm("¿Archivar esta ficha? Se conservará el historial y se retirará su publicación."))return;
     setBusy(action);
     try {
-      const {record:updated}=await legalRequest<{record:LegalRecord}>("/api/legal/"+encodeURIComponent(record.id)+(action==="archive"?"":"/workflow"),action==="archive"?{method:"DELETE"}:{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action,notes:notes.trim(),...(record.latestRevisionId?{revisionId:record.latestRevisionId}:{})})});
+      const {record:updated}=await legalRequest<{record:LegalRecord}>("/api/legal/"+encodeURIComponent(record.id)+(action==="archive"?"":"/workflow"),action==="archive"?{method:"DELETE",headers:{"Content-Type":"application/json"},body:"{}"}:{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action,notes:notes.trim(),...(record.latestRevisionId?{revisionId:record.latestRevisionId}:{})})});
       onChange(updated);setNotes("");
       setMessage("Operación registrada. Estado actual: "+legalDisplayStatus(updated)+".");
     } catch(error) {setError(error instanceof Error?error.message:"No se pudo registrar la operación.");}

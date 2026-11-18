@@ -167,6 +167,49 @@ with sync_playwright() as playwright:
         assert anonymous.request.get(origin + "/api/legal/documents/" + document["id"]).status == 404
     assert anonymous.request.get(origin + "/api/public/legal/" + new_record["id"]).status == 404
 
+    # DELETE actions use the same JSON/origin contract as the other legal mutations.
+    retained_document = next(document for document in stored["documents"] if document["name"] == "evidencia-ui-uno.pdf")
+    removed_document = next(document for document in stored["documents"] if document["name"] == "evidencia-ui-dos.pdf")
+    removed_article = editor.locator("article.le-document").filter(has_text=removed_document["name"])
+    detach = removed_article.get_by_role("button", name="Retirar de esta edición", exact=True)
+    expect(detach).to_be_enabled()  # Wait for the saved editor and its dirty/busy guard.
+    document_url = origin + "/api/legal/" + new_record["id"] + "/documents/" + removed_document["id"]
+    editor.once("dialog", lambda dialog: dialog.accept())
+    with editor.expect_response(lambda response: response.request.method == "DELETE" and response.url == document_url) as detached, editor.expect_event("dialog") as detach_confirmation:
+        detach.click()
+    assert detach_confirmation.value.type == "confirm"
+    detached_record = success(detached.value)["record"]
+    assert detached.value.request.headers["content-type"].split(";")[0] == "application/json"
+    assert json.loads(detached.value.request.post_data) == {}
+    assert detached_record["id"] == new_record["id"] and detached_record["status"] == "borrador"
+    assert detached_record["documentIds"] == [retained_document["id"]]
+    assert detached_record["documents"][0]["sourceId"] == canonical_source_id
+    expect(removed_article).to_have_count(0)
+
+    draft_workflow = editor.get_by_role("region", name="Gestión editorial", exact=True)
+    archive = draft_workflow.get_by_role("button", name="Archivar ficha", exact=True)
+    expect(archive).to_be_enabled()
+    editor.once("dialog", lambda dialog: dialog.accept())
+    with editor.expect_response(lambda response: response.request.method == "DELETE" and response.url == origin + "/api/legal/" + new_record["id"]) as archived, editor.expect_event("dialog") as archive_confirmation:
+        archive.click()
+    assert archive_confirmation.value.type == "confirm"
+    archived_record = success(archived.value)["record"]
+    assert archived.value.request.headers["content-type"].split(";")[0] == "application/json"
+    assert json.loads(archived.value.request.post_data) == {}
+    assert archived_record["status"] == "archivado" and not archived_record["published"]
+    expect(editor.get_by_role("heading", name="Consulta del instrumento legal", exact=True)).to_be_visible()
+    preserved = success(team.request.get(origin + "/api/legal/" + new_record["id"]))["record"]
+    assert preserved["id"] == new_record["id"] and preserved["status"] == "archivado"
+    assert preserved["documentIds"] == [retained_document["id"]]
+    assert preserved["sources"] == stored["sources"]
+    assert any(event["action"] == "archivar" for event in preserved["trace"])
+    assert {event["id"] for event in stored["trace"]}.issubset({event["id"] for event in preserved["trace"]})
+    for document in stored["documents"]:
+        historical_pdf = team.request.get(origin + "/api/legal/documents/" + document["id"])
+        assert historical_pdf.ok and historical_pdf.body().startswith(b"%PDF-")
+        assert anonymous.request.get(origin + "/api/legal/documents/" + document["id"]).status == 404
+    assert anonymous.request.get(origin + "/api/public/legal/" + new_record["id"]).status == 404
+
     # Edit an approved record; its old public snapshot survives until the full workflow completes.
     editor.goto(origin + "/proteccion-legal/" + legal_id + "/editar", wait_until="networkidle")
     expect(editor.get_by_label("Número de decreto", exact=True)).to_have_value("PRUEBA-001")

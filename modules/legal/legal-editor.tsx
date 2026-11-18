@@ -224,7 +224,7 @@ export function LegalEditor({ record, canCreate = false }: { record?: LegalRecor
     if (!window.confirm("¿Retirar este PDF de la versión en edición? La historia y las revisiones aprobadas se conservan.")) return;
     setBusy(true); setError(""); setMessage("");
     try {
-      const result = await request<{ record: LegalRecord }>("/api/legal/" + encodeURIComponent(current.id) + "/documents/" + encodeURIComponent(id), { method: "DELETE" });
+      const result = await request<{ record: LegalRecord }>("/api/legal/" + encodeURIComponent(current.id) + "/documents/" + encodeURIComponent(id), { method: "DELETE", headers: { "Content-Type": "application/json" }, body: "{}" });
       accept(result.record); setMessage("Documento retirado de la versión en edición.");
     } catch (reason) { fail(reason); } finally { setBusy(false); }
   }
