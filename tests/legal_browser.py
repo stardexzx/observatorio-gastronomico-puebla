@@ -84,8 +84,6 @@ with sync_playwright() as playwright:
     approved_record = success(anonymous.request.get(origin + "/api/public/legal/" + legal_id))["record"]
     restricted_citations = [source["publicCitation"] for source in approved_record["sources"] if source["visibility"] == "restringido" and source["publicCitation"]]
     assert restricted_citations, "La evidencia restringida debe conservar su cita autorizada"
-    for citation in restricted_citations:
-        expect(selected.get_by_text(citation, exact=True)).to_be_visible()
     selected.get_by_role("tab", name="Documentos", exact=True).click()
     expect(selected.get_by_role("link", name=re.compile("public-final-test.pdf"))).to_be_visible()
     expect(page.get_by_text("EVIDENCIA LEGAL PRIVADA.pdf", exact=True)).to_have_count(0)
@@ -97,6 +95,9 @@ with sync_playwright() as playwright:
     expect(selected).to_contain_text("Municipio sintético")
     selected.get_by_role("link", name=re.compile("^Abrir ficha completa")).click()
     expect(page.get_by_role("heading", name=legal_name, exact=True)).to_be_visible()
+    full_record = page.get_by_role("article", name="Ficha del instrumento", exact=True)
+    for citation in restricted_citations:
+        expect(full_record.get_by_text(citation, exact=True)).to_be_visible()
     expect(page.get_by_text("NOTA LEGAL PRIVADA", exact=True)).to_have_count(0)
     pdf = anonymous.request.get(origin + "/api/legal/documents/" + session["publicDocumentId"])
     assert pdf.ok and pdf.body().startswith(b"%PDF-")

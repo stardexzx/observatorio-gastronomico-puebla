@@ -12,6 +12,7 @@ import {
 } from "@/data/legal";
 import { LegalIcon } from "./legal-ui";
 import { LegalWorkflowControls } from "./legal-workflow-controls";
+import { LegalRecordView } from "./legal-record-view";
 import "./legal-editor.css";
 
 type PendingDocument = {
@@ -242,7 +243,17 @@ export function LegalEditor({ record, canCreate = false }: { record?: LegalRecor
   }
   const matchingOptions = options.filter(option => option.kind === linkKind && !input.links.some(link => legalLinkKey(link) === legalLinkKey(option)) && option.name.toLocaleLowerCase("es").includes(linkSearch.toLocaleLowerCase("es")));
 
-  if (!editable) return <section className="g-card legal-editor"><h1>Edición no disponible</h1><p>Tu sesión no tiene permiso para editar esta ficha. Puedes consultar su información y las acciones que autorice el servidor.</p><button className="g-btn" type="button" onClick={leave}>Volver a la ficha</button></section>;
+  if (!editable) {
+    if (!current) return <section className="g-card legal-editor"><h1>Edición no disponible</h1><p>Tu sesión no tiene permiso para editar esta ficha. Puedes consultar su información y las acciones que autorice el servidor.</p><button className="g-btn" type="button" onClick={leave}>Volver a la ficha</button></section>;
+    return <div className="legal-editor" aria-busy={busy}>
+      <header className="le-heading">
+        <div><p className="le-eyebrow">Protección legal · Consulta</p><h1>{current.status === "en_revision" ? "Ficha en revisión" : "Consulta del instrumento legal"}</h1><p>{current.status === "en_revision" ? "La edición permanece en pausa hasta que la persona responsable concluya la revisión." : "Puedes consultar la ficha y realizar las acciones que autorice el servidor."}</p></div>
+        <button className="g-btn" type="button" onClick={leave} disabled={busy}>Volver a la ficha</button>
+      </header>
+      <LegalRecordView record={current} />
+      <LegalWorkflowControls record={current} onChange={accept} disabled={busy} />
+    </div>;
+  }
 
   return <div className="legal-editor" aria-busy={busy}>
     <header className="le-heading">
