@@ -104,6 +104,24 @@ Guardar no publica. El envío sella una revisión; la evaluación corresponde a 
 
 Editar un instrumento ya publicado conserva la última versión autorizada hasta aprobar y publicar otra. Retirar la publicación oculta la consulta pública y sus documentos. Archivar conserva las filas, los documentos y el historial.
 
+### Estados de los expedientes
+
+El estado del trámite se selecciona en la captura del expediente. Guardarlo actualiza el mismo expediente y conserva su vínculo con el instrumento. Es independiente de los estados editoriales de revisión, validación y publicación.
+
+| Estado del trámite | Indicador al que aporta |
+| --- | --- |
+| Solicitado | En trámite |
+| En evaluación | En evaluación |
+| Requerimientos | En trámite |
+| Favorable | Favorables |
+| Rechazado | Rechazados |
+| Desistido | Total de expedientes |
+| No documentado | Total de expedientes |
+
+Todos aportan al total. Los desistidos y los de estado no documentado no se cuentan como favorables, rechazados ni en evaluación. Marcar un expediente como favorable no concede derechos ni publica automáticamente la ficha.
+
+El equipo consulta el estado guardado; la consulta pública y sus indicadores conservan la última versión autorizada hasta aprobar y publicar una nueva revisión. Las pruebas de integración recorren los siete estados, verifican la misma identidad, persistencia y auditoría, y comprueban los indicadores antes y después de publicar.
+
 ## Fuentes y PDFs
 
 Cada fuente añadida requiere título y una referencia, URL o cita aportada. Las URLs de fuentes usan HTTPS. Los vínculos con el acervo requieren una fuente y una descripción de su alcance.

@@ -4,7 +4,7 @@ import {randomUUID,createHash} from 'node:crypto';
 import {build} from 'esbuild';
 
 const compiled=await build({entryPoints:['data/legal.ts'],bundle:true,platform:'node',format:'esm',write:false});
-const {createBlankLegalInput,legalInputFromRecord,legalLinkKey}=await import('data:text/javascript;base64,'+Buffer.from(compiled.outputFiles[0].contents).toString('base64'));
+const {createBlankLegalInput,legalInputFromRecord,legalLinkKey,legalDossierLabels}=await import('data:text/javascript;base64,'+Buffer.from(compiled.outputFiles[0].contents).toString('base64'));
 
 export function legalTestPdf(label='ISOLATED TEST DOCUMENT') {
  const escaped=label.replace(/([\\()])/g,'\\$1');
@@ -186,6 +186,56 @@ export async function runLegalChecks(context) {
  assert.equal(approved.summary.granted,initial.summary.granted+1);
  assert.equal(approved.summary.municipalityTotal,(await db.query('SELECT count(*)::int AS n FROM ogp.municipios_puebla')).rows[0].n);
 
+ // Each real dossier state persists on the same identity; only approved versions affect public KPIs.
+ const dossierCases=[
+  ['solicitado',{granted:0,inProgress:1,evaluation:0,rejected:0}],
+  ['evaluacion',{granted:0,inProgress:0,evaluation:1,rejected:0}],
+  ['requerimientos',{granted:0,inProgress:1,evaluation:0,rejected:0}],
+  ['rechazado',{granted:0,inProgress:0,evaluation:0,rejected:1}],
+  ['desistido',{granted:0,inProgress:0,evaluation:0,rejected:0}],
+  ['no_documentado',{granted:0,inProgress:0,evaluation:0,rejected:0}],
+  ['favorable',{granted:1,inProgress:0,evaluation:0,rejected:0}],
+ ];
+ assert.deepEqual(Object.keys(legalDossierLabels).sort(),dossierCases.map(([state])=>state).sort(),'All seven dossier states are exercised');
+ const dossierId=record.dossier?.id;assert.ok(dossierId,'The captured dossier has a persistent identity');
+ const dossierCount=(await db.query('SELECT count(*)::int AS n FROM ogp.expedientes_legales')).rows[0].n;
+ const auditCount=async()=>(await db.query("SELECT count(*)::int AS n FROM ogp.eventos_auditoria WHERE tabla_afectada='expedientes_legales' AND entidad_id=$1 AND accion='update' AND usuario_id=$2",[dossierId,record.createdBy])).rows[0].n;
+ const initialAuditCount=await auditCount(),initialPipeline=(await parse(await get('/api/legal',admin))).summary;
+ const initialPublicDossiers=(await publicCatalog()).summary;
+ const assertDossierSummary=(summary,baseline,contribution,label)=>{
+  assert.equal(summary.total,baseline.total,label+': changing a state does not create another dossier');
+  for(const key of ['granted','inProgress','evaluation','rejected'])assert.equal(summary[key],baseline[key]-(key==='granted'?1:0)+contribution[key],label+': '+key);
+ };
+ for(const [index,[state,contribution]] of dossierCases.entries()){
+  const previousPublic=await publicCatalog(),previousPublished=previousPublic.records.find(item=>item.id===legalId);
+  const previousRevision=record.latestRevisionId,previousHash=await revisionHash(previousRevision);
+  record.dossier.state=state;record=await save(record);
+  assert.equal(record.dossier.id,dossierId,state+': saving preserves the dossier identity');
+  assert.equal(record.dossier.state,state,state+': save response has the requested state');
+  const persisted=(await db.query('SELECT e.estado_tramite,p.expediente_id FROM ogp.instrumento_panel p JOIN ogp.expedientes_legales e ON e.id=p.expediente_id WHERE p.instrumento_id=$1',[legalId])).rows[0];
+  assert.equal(persisted.expediente_id,dossierId,state+': panel keeps the same dossier');
+  assert.equal(persisted.estado_tramite,state,state+': the SQL state persists');
+  assert.equal((await db.query('SELECT count(*)::int AS n FROM ogp.expedientes_legales')).rows[0].n,dossierCount,state+': no duplicate dossier is inserted');
+  assert.equal((await db.query('SELECT count(*)::int AS n FROM ogp.expediente_instrumentos WHERE expediente_id=$1 AND instrumento_id=$2',[dossierId,legalId])).rows[0].n,1,state+': the documented relationship remains unique');
+  assert.equal(await auditCount(),initialAuditCount+index+1,state+': the authenticated update is audited');
+  const teamCatalog=await parse(await get('/api/legal',admin));
+  assert.equal(teamCatalog.records.find(item=>item.id===legalId).dossier.state,state,state+': administration reads the working state');
+  assertDossierSummary(teamCatalog.summary,initialPipeline,contribution,state+' private pipeline');
+  const pendingPublic=await publicCatalog();
+  assert.deepEqual(pendingPublic.records.find(item=>item.id===legalId).dossier,previousPublished.dossier,state+': a working state does not replace the public dossier');
+  assert.deepEqual(pendingPublic.summary,previousPublic.summary,state+': public statistics remain unchanged before approval');
+  record=await action(legalId,'submit',capture);record=await action(legalId,'validate',review);
+  assert.notEqual(record.latestRevisionId,previousRevision,state+': changing the dossier requires a fresh approved revision');
+  assert.equal((await parse(await get('/api/public/legal/'+legalId))).record.dossier.state,previousPublished.dossier.state,state+': validation alone does not publish the state');
+  assert.equal(await revisionHash(previousRevision),previousHash,state+': the previous public snapshot stays immutable');
+  record=await action(legalId,'publish',review);
+  const statePublic=await publicCatalog(),statePublished=statePublic.records.find(item=>item.id===legalId);
+  assert.equal(statePublished.dossier.id,dossierId,state+': publication preserves the dossier identity');
+  assert.equal(statePublished.dossier.state,state,state+': publication exposes the approved state');
+  assertDossierSummary(statePublic.summary,initialPublicDossiers,contribution,state+' public pipeline');
+ }
+ assert.equal(record.dossier.state,'favorable','The shared legal fixture returns to its original dossier state');
+
  // SQL guards must protect published revisions and document bytes.
  await db.query('BEGIN');
  await db.query('SAVEPOINT legal_immutable');
@@ -241,6 +291,6 @@ export async function runLegalChecks(context) {
  assert.equal((await db.query('SELECT count(*)::int AS n FROM ogp.registro_revisiones WHERE registro_id=$1',[legalId])).rows[0].n,revisionCount);
  assert.equal((await get('/api/legal/documents/'+publicDocumentId)).status,200);
  assertNoPrivate(await publicCatalog());
- console.log('Legal API/SQL: original snapshots, CRUD/roles/origin, sources, canonical relationships, PDFs, sealed versions, privacy, SQL indicators, archive and idempotent migrations passed.');
+ console.log('Legal API/SQL: original snapshots, CRUD/roles/origin, sources, canonical relationships, PDFs, sealed versions, privacy, seven persisted dossier states and approved KPIs, SQL indicators, archive and idempotent migrations passed.');
  return {legalId,legalName:input.name,legalRecipeId:recipeId,publicDocumentId,privateDocumentId,privateLegalId};
 }

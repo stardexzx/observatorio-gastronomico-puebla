@@ -163,6 +163,66 @@ with sync_playwright() as p:
     expect(recipes_layer).to_have_attribute("aria-pressed", "false")
     expect(page).to_have_url(re.compile("tipos="))
 
+    # Class filters change the actual public graph, its sidebar and its counters together.
+    visit("/red-conocimiento")
+    graph = page.get_by_role("group", name="Relaciones del acervo", exact=True)
+    classes = page.get_by_role("group", name="Filtrar por clase", exact=True)
+    listing = page.get_by_role("list", name="Registros de la red", exact=True)
+    summary = page.get_by_role("status", name="Resumen de la red", exact=True)
+
+    def assert_graph_classes(allowed=None):
+        nodes = graph.get_by_role("button")
+        node_labels = [node.get_attribute("aria-label") for node in nodes.all()]
+        assert node_labels, "Filtering a populated class must retain its nodes even without edges"
+        if allowed is not None:
+            assert all(label.split(", ", 1)[0] in allowed for label in node_labels), node_labels
+        expect(listing.locator(":scope > li")).to_have_count(len(node_labels))
+        expect(summary).to_have_text(f"{len(node_labels)} registros · {graph.locator('line').count()} relaciones")
+        return node_labels
+
+    all_nodes = assert_graph_classes()
+    graph.get_by_role("button", name=re.compile("^Receta, ")).first.focus()
+    page.keyboard.press("Enter")
+    expect(page.locator("aside").get_by_role("link", name="Ver ficha", exact=True)).to_be_visible()
+    per_class = [("Ingredientes", "Ingrediente"), ("Recetas", "Receta"),
+                 ("Cocineras y cocineros", "Cocinera o cocinero"), ("Capítulos", "Capítulo"),
+                 ("Instrumentos jurídicos", "Instrumento jurídico"), ("Mercados", "Mercado"),
+                 ("Municipios", "Municipio")]
+    assert classes.get_by_role("button", name="Ingredientes", exact=True).count() == 1
+    assert classes.get_by_role("button", name="Recetas", exact=True).count() == 1
+    for label, prefix in per_class:
+        choice = classes.get_by_role("button", name=label, exact=True)
+        if choice.count() == 0:
+            continue  # A class is offered only when it has published records.
+        choice.click()
+        expect(choice).to_have_attribute("aria-pressed", "true")
+        expect(classes.get_by_role("button", name="Todos", exact=True)).to_have_attribute("aria-pressed", "false")
+        assert_graph_classes({prefix})
+        expect(page.locator("aside").get_by_role("link", name="Ver ficha", exact=True)).to_have_count(0)
+        classes.get_by_role("button", name="Todos", exact=True).click()
+        expect(classes.get_by_role("button", name="Todos", exact=True)).to_have_attribute("aria-pressed", "true")
+        assert len(assert_graph_classes()) == len(all_nodes)
+
+    classes.get_by_role("button", name="Ingredientes", exact=True).click()
+    classes.get_by_role("button", name="Recetas", exact=True).click()
+    combined = assert_graph_classes({"Ingrediente", "Receta"})
+    assert {label.split(", ", 1)[0] for label in combined} == {"Ingrediente", "Receta"}
+    search = page.get_by_role("textbox", name="Buscar en la red", exact=True)
+    search.fill(catalog["ingredients"][0]["name"])
+    assert_graph_classes({"Ingrediente", "Receta"})
+    search.fill("SIN-NODOS-PARA-ESTOS-FILTROS-48329")
+    expect(page.get_by_text("No encontramos registros con esos filtros.", exact=True)).to_be_visible()
+    expect(summary).to_have_text("0 registros · 0 relaciones")
+    expect(graph.get_by_role("button")).to_have_count(0)
+    expect(listing.locator(":scope > li")).to_have_count(0)
+    page.get_by_role("button", name="Limpiar filtros", exact=True).click()
+    expect(search).to_have_value("")
+    assert len(assert_graph_classes()) == len(all_nodes)
+    classes.get_by_role("button", name="Ingredientes", exact=True).click()
+    page.get_by_role("button", name="Restablecer", exact=True).click()
+    expect(classes.get_by_role("button", name="Todos", exact=True)).to_have_attribute("aria-pressed", "true")
+    assert len(assert_graph_classes()) == len(all_nodes)
+
     # All history eras come from the shared catalog and keep interactive navigation.
     visit("/memoria")
     expect(page.get_by_role("tab")).to_have_count(5)
