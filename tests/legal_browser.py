@@ -81,6 +81,11 @@ with sync_playwright() as playwright:
     target.get_by_role("button", name=re.compile("^" + re.escape(legal_name))).click()
     selected = page.get_by_role("article", name="Ficha seleccionada", exact=True)
     expect(selected).to_contain_text(legal_name)
+    approved_record = success(anonymous.request.get(origin + "/api/public/legal/" + legal_id))["record"]
+    restricted_citations = [source["publicCitation"] for source in approved_record["sources"] if source["visibility"] == "restringido" and source["publicCitation"]]
+    assert restricted_citations, "La evidencia restringida debe conservar su cita autorizada"
+    for citation in restricted_citations:
+        expect(selected.get_by_text(citation, exact=True)).to_be_visible()
     selected.get_by_role("tab", name="Documentos", exact=True).click()
     expect(selected.get_by_role("link", name=re.compile("public-final-test.pdf"))).to_be_visible()
     expect(page.get_by_text("EVIDENCIA LEGAL PRIVADA.pdf", exact=True)).to_have_count(0)
